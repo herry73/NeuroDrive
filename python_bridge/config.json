@@ -1,0 +1,88 @@
+{
+  "_readme": "Every tunable parameter for the NeuroDrive bridge. See config.README.md for what each field does. Keys starting with '_' are comments and are ignored by the loader.",
+
+  "eeg": {
+    "_source": "serial = real MindWave over Bluetooth SPP | mock = synthetic signal, no hardware | replay = play back a recorded CSV",
+    "source": "mock",
+    "serial": {
+      "port": "COM5",
+      "baudrate": 57600,
+      "read_timeout_s": 0.2,
+      "reconnect_attempts": 3,
+      "reconnect_delay_s": 2.0
+    },
+    "replay": {
+      "csv_path": "logs/recorded_session.csv",
+      "loop": true,
+      "speed": 1.0
+    },
+    "mock": {
+      "seed": 42,
+      "blink_interval_s": 8.0,
+      "attention_period_s": 20.0,
+      "emit_raw": false
+    },
+    "signal_timeout_ms": 2000
+  },
+
+  "signal_processing": {
+    "attention_window": 5,
+    "blink_strength_threshold": 150,
+    "blink_debounce_ms": 300,
+    "double_blink_window_ms": 500,
+    "poor_signal_cutoff": 25,
+    "blink_from_raw": {
+      "_note": "Optional fallback if the headset does not emit 0x16 blink rows.",
+      "enabled": false,
+      "amplitude_threshold": 300,
+      "refractory_ms": 400
+    }
+  },
+
+  "control": {
+    "attention_forward_threshold": 60,
+    "attention_stop_threshold": 40,
+    "attention_stop_hold_ms": 1000,
+    "_blink_mode": "alternate = each blink turns the other way | single_double = one blink LEFT, two blinks RIGHT",
+    "blink_mode": "alternate",
+    "first_turn_direction": "LEFT",
+    "turn_command_repeat_ms": 150,
+    "calibration_seconds": 15,
+    "require_good_signal": true
+  },
+
+  "transport": {
+    "_mode": "udp = wireless (primary) | serial = USB cable to ESP32 (fallback)",
+    "mode": "udp",
+    "udp": {
+      "esp32_ip": "192.168.4.1",
+      "esp32_port": 4210,
+      "listen_port": 4211,
+      "expect_ack": true
+    },
+    "serial": {
+      "port": "COM6",
+      "baudrate": 115200
+    },
+    "resend_interval_ms": 250,
+    "queue_size": 32
+  },
+
+  "ui": {
+    "console_dashboard": true,
+    "refresh_hz": 10,
+    "keyboard_override": true,
+    "colour": true
+  },
+
+  "logging": {
+    "dir": "logs",
+    "level": "INFO",
+    "csv_data_log": true,
+    "console_log": false
+  },
+
+  "loop": {
+    "rate_hz": 20
+  }
+}

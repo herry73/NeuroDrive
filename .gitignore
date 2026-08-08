@@ -216,3 +216,20 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# NeuroDrive
+# ---------------------------------------------------------------------------
+
+# WiFi credentials. Copy secrets.h.example to secrets.h and edit that.
+firmware/neurodrive_firmware/secrets.h
+
+# PlatformIO build output
+firmware/.pio/
+firmware/.pioenvs/
+firmware/.piolibdeps/
+
+# Session logs and recordings. Keep a curated demo session by force-adding
+# it:  git add -f python_bridge/logs/demo_session.csv
+python_bridge/logs/*.log
+python_bridge/logs/*.csv
