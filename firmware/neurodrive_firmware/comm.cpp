@@ -127,13 +127,15 @@ static bool applyCommand(char command, unsigned long now, bool overUdp) {
 
 static void startAccessPoint() {
   WiFi.mode(WIFI_AP);
-  const bool ok = WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
+  const bool ok = WiFi.softAP(WIFI_SSID, WIFI_PASSWORD, WIFI_AP_CHANNEL);
   wifiUp = ok;
   if (ok) {
     Serial.print(F("[wifi] access point '"));
     Serial.print(WIFI_SSID);
     Serial.print(F("' up at "));
-    Serial.println(WiFi.softAPIP());
+    Serial.print(WiFi.softAPIP());
+    Serial.print(F(" on channel "));
+    Serial.println(WIFI_AP_CHANNEL);
   } else {
     Serial.println(F("[wifi] FAILED to start access point"));
   }
@@ -176,7 +178,7 @@ static void startStation() {
 }
 
 void commSetup() {
-#if WIFI_MODE_AP
+#if WIFI_USE_AP
   startAccessPoint();
 #else
   startStation();
@@ -283,7 +285,7 @@ int commTick(unsigned long now) {
 // ---------------------------------------------------------------------------
 
 bool commWifiConnected() {
-#if WIFI_MODE_AP
+#if WIFI_USE_AP
   return wifiUp;
 #else
   return wifiUp && WiFi.status() == WL_CONNECTED;
@@ -291,7 +293,7 @@ bool commWifiConnected() {
 }
 
 IPAddress commLocalIP() {
-#if WIFI_MODE_AP
+#if WIFI_USE_AP
   return WiFi.softAPIP();
 #else
   return WiFi.localIP();
@@ -299,7 +301,7 @@ IPAddress commLocalIP() {
 }
 
 const char* commModeName() {
-#if WIFI_MODE_AP
+#if WIFI_USE_AP
   return "AP";
 #else
   return "STA";

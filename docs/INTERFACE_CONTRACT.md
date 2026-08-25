@@ -1,7 +1,7 @@
 # NeuroDrive Interface Contract
 
 **Owner:** M1 (Project Manager & System Integrator)
-**Status:** v1.0 — frozen
+**Status:** v1.0, frozen
 **Change policy:** nothing in this document changes without M1's approval and
 agreement from M2, M3 and M5. Every change requires the affected tests in
 `tests/` to be updated in the same pull request.
@@ -29,10 +29,10 @@ Why so simple: it is readable in a serial monitor, visible in a Wireshark
 capture, and typeable by hand. A student team debugging at 2am can send a
 command with `nc`. A binary protocol would buy nothing here.
 
-**Also accepted** (so the protocol has room to grow — NFR 3.6): the long
-forms `FORWARD`, `LEFT`, `RIGHT`, `STOP`, `PING`, case-insensitive. The
-bridge always transmits the single-character form; the long forms exist so a
-human can drive the vehicle from a serial monitor.
+The firmware also accepts the long forms `FORWARD`, `LEFT`, `RIGHT`, `STOP`
+and `PING`, case-insensitive, so the protocol has room to grow (NFR 3.6).
+The bridge always transmits the single-character form. The long forms exist
+so a human can drive the vehicle from a serial monitor.
 
 A single datagram may contain several newline-separated commands. The
 firmware processes them in order.
@@ -43,13 +43,13 @@ firmware processes them in order.
 |---|---|---|
 | Medium | WiFi UDP | USB serial |
 | Address | ESP32 IP, port **4210** | COM port on the laptop |
-| Baud | — | 115200 |
+| Baud | n/a | 115200 |
 | Config key | `transport.mode = "udp"` | `transport.mode = "serial"` |
 
 UDP, not TCP (NFR 3.2): no handshake to re-establish, no retransmission
 stalling behind a lost packet. Loss is handled by re-sending instead.
 
-The ESP32 defaults to running its **own access point** (`WIFI_MODE_AP 1`),
+The ESP32 defaults to running its **own access point** (`WIFI_USE_AP 1`),
 so the vehicle is always at `192.168.4.1` and no venue network is involved.
 If station mode is used instead, read the IP the ESP32 prints at boot and put
 it in `python_bridge/config.json` as `transport.udp.esp32_ip`.
@@ -75,7 +75,7 @@ updated, so the bridge's round-trip measurement includes the motor reaction,
 not just the network hop.
 
 Acknowledgements are advisory. The bridge does not wait for them and never
-retransmits because one is missing — it uses them only to measure latency and
+retransmits because one is missing. It uses them only to measure latency and
 to show a link indicator.
 
 ### 1.4 Re-send and keepalive (COM-04, SF-02)
@@ -154,7 +154,7 @@ the contract between M2 (signal work) and M5 (application and networking).
 ### `eeg_sources.EEGSource`
 
 The acquisition interface. Swapping the headset means writing one new class
-(NFR 3.6) — nothing downstream changes.
+(NFR 3.6). Nothing downstream changes.
 
 ```python
 class EEGSource:
@@ -276,7 +276,7 @@ Three threads in the bridge, and the reason for each (NFR 3.3):
 
 | Leg | Typical | Measurable by us? |
 |---|---|---|
-| Brain event → headset reports it | ~500 ms (1 Hz eSense) | **No** — property of the headset |
+| Brain event → headset reports it | ~500 ms (1 Hz eSense) | **No.** Property of the headset |
 | Reader → processor → mapper | < 1 ms | Yes (`latency_benchmark.py`) |
 | Control-loop quantisation | ≤ 50 ms (20 Hz) | Yes |
 | Bridge → ESP32 → motors | ~5-20 ms on a quiet network | Yes (ACK round trip / 2) |

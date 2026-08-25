@@ -19,11 +19,11 @@ driver.
 
 ---
 
-## Quick start — no hardware needed
+## Quick start without hardware
 
-You can run the entire system on any laptop. The bridge ships with a
-synthetic EEG source, and `tests/fake_esp32.py` is a faithful software model
-of the vehicle firmware.
+The whole system runs on any laptop. The bridge ships with a synthetic EEG
+source, and `tests/fake_esp32.py` reimplements the vehicle firmware's state
+machine in Python.
 
 ```powershell
 git clone <repo-url> && cd NeuroDrive
@@ -134,7 +134,7 @@ Fifteen seconds of calibration (the vehicle cannot move), then it arms.
 | `↑ ← → ↓` | Drive, when the override is on |
 | `space` | Software emergency stop (`Enter` re-arms) |
 | `c` | Recalibrate |
-| `q` | Quit — always sends STOP first |
+| `q` | Quit. Always sends STOP first |
 
 ---
 
@@ -142,14 +142,14 @@ Fifteen seconds of calibration (the vehicle cannot move), then it arms.
 
 | Input | Condition | Command |
 |---|---|---|
-| Attention (0–100, smoothed over 5 samples) | ≥ 60 | **FORWARD** |
+| Attention (0-100, smoothed over 5 samples) | ≥ 60 | **FORWARD** |
 | | < 40 for more than 1 s | **STOP** |
-| | between 40 and 60 | hold — the dead band stops it stuttering |
+| | between 40 and 60 | hold. The dead band stops it stuttering |
 | Blink strength | ≥ 150, debounced 300 ms | **LEFT**, then **RIGHT**, alternating |
 | Signal quality | "poor signal" > 25 | commands paused |
 | Link | no EEG data for 2 s | **STOP** |
 
-Every number here is in `config.json` — see `config.README.md` for what to
+Every number here is in `config.json`. See `config.README.md` for what to
 change when it feels wrong.
 
 ---
@@ -158,13 +158,13 @@ change when it feels wrong.
 
 Four independent layers. Each works if the others fail.
 
-1. **Hardware kill switch** — physically breaks the motor supply. Not
+1. **Hardware kill switch.** Physically breaks the motor supply. Not
    software. This is the one that always works.
-2. **E-stop button (GPIO 4)** — the firmware latches STOP and refuses
+2. **E-stop button (GPIO 4).** The firmware latches STOP and refuses
    movement commands until it is released.
-3. **Watchdog (2 s)** — if commands stop arriving for any reason (bridge
-   crashed, WiFi dropped, laptop closed), the vehicle stops on its own.
-4. **Signal-loss stop** — the bridge sends STOP the moment the headset goes
+3. **Watchdog (2 s).** If commands stop arriving, the vehicle stops on its
+   own. It does not care why: bridge crashed, WiFi dropped, laptop lid shut.
+4. **Signal-loss stop.** The bridge sends STOP the moment the headset goes
    quiet or the signal quality collapses.
 
 Quitting the bridge, in any way, transmits STOP before exiting.
@@ -184,8 +184,8 @@ python tests\latency_benchmark.py          # COM-03 measurement
 
 No hardware required for any of it. The integration tests drive the real
 bridge modules into `fake_esp32.py`, which implements the same state machine,
-turn timing and watchdog as the firmware — so the tests fail if the two
-halves of the interface contract ever drift apart.
+turn timing and watchdog as the firmware. The tests fail if the two halves
+of the interface contract ever drift apart.
 
 ---
 
@@ -193,14 +193,14 @@ halves of the interface contract ever drift apart.
 
 Ordered by preference, all tested and working:
 
-1. **Keyboard override** — press `k`. The dashboard still shows live EEG
+1. **Keyboard override.** Press `k`. The dashboard still shows live EEG
    values, so the headset is visibly working even if it is not steering.
-2. **Recorded session replay** — every run writes `logs/session_*.csv`.
+2. **Recorded session replay.** Every run writes `logs/session_*.csv`.
    Replay a good one with `python main.py --replay-file logs/session_X.csv`.
-   Visually identical to a live drive. Say so if asked.
-3. **Serial cable** — set `transport.mode` to `serial` if WiFi misbehaves.
-4. **Vehicle on blocks** — wheels spin freely, the system is still visibly
-   working.
+   It looks identical to a live drive. Say so if asked.
+3. **Serial cable.** Set `transport.mode` to `serial` if WiFi misbehaves.
+4. **Vehicle on blocks.** Wheels spin freely, and the system is still
+   visibly working.
 
 Generate a scripted session in advance:
 

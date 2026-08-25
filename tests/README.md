@@ -41,7 +41,7 @@ path, so no installation step is needed.
 
 ## The two simulators
 
-These are what make hardware-free testing honest rather than superficial.
+These are what make hardware-free testing honest rather than decorative.
 
 ### `fake_esp32.py`
 
@@ -65,7 +65,7 @@ and the firmware ever disagree about the protocol, `test_integration.py`
 fails. **When you change the protocol, change this file in the same pull
 request.**
 
-Its limits, stated plainly: it does not model radio loss, motor inertia, or
+Its limits, stated plainly. It does not model radio loss, motor inertia, or
 battery sag. It proves the *logic* is right, not that the vehicle works.
 
 ### `mock_eeg_generator.py`
@@ -76,7 +76,7 @@ Four scenarios:
 |---|---|
 | `smooth` | Clean sweep across both thresholds, regular blinks |
 | `noisy` | Poor-signal bursts (SF-03) and sub-threshold blinks (SP-04) |
-| `flat` | Attention never reaches the threshold — the vehicle must never move |
+| `flat` | Attention never reaches the threshold, so the vehicle must never move |
 | `demo` | A scripted drive suitable for the fallback demo |
 
 ```powershell
@@ -102,8 +102,8 @@ python tests\latency_benchmark.py --target 192.168.4.1     # real vehicle
 
 It reports two figures separately, and refuses to blur them:
 
-* **Bridge processing** — sample in to command decided. Well under 1 ms.
-* **Transport + firmware** — command sent to acknowledgement back, which
+* **Bridge processing.** Sample in to command decided. Well under 1 ms.
+* **Transport and firmware.** Command sent to acknowledgement back, which
   includes the motor state machine acting on it.
 
 It does **not** measure the headset's own latency, and says so. The MindWave
@@ -127,15 +127,15 @@ Section 10.1 of the project plan, and where each item is verified.
 | 1 | Headset connects and streams attention + blink | `test_eeg_reader`, manual with hardware |
 | 2 | Bridge emits all four commands | `test_command_mapper`, `test_integration` |
 | 3 | ESP32 receives over UDP (serial fallback) | `test_integration`, `test_wifi_sender` |
-| 4 | Motors respond to all four commands | **Manual** — `udp_test_sender.py` |
+| 4 | Motors respond to all four commands | **Manual**, `udp_test_sender.py` |
 | 5 | Forward on concentration, stop on relaxing | `test_integration`, then a real user |
 | 6 | Blink produces a direction change | `test_command_mapper.TestTurns` |
-| 7 | Hardware emergency stop works | **Manual** — logic in `test_integration` |
+| 7 | Hardware emergency stop works | **Manual**, logic in `test_integration` |
 | 8 | Watchdog stops on communication loss | `test_integration.test_watchdog_...` |
 | 9 | Stable for 5 minutes | `python main.py --duration 300` + `--target` benchmark |
 | 10 | Thresholds tunable without code changes | `test_config` |
 
-Items 4 and 7 cannot be automated — they are physical. Everything else is
+Items 4 and 7 cannot be automated. They are physical. Everything else is
 covered, and rerunning the suite after any change is the regression test.
 
 ### The 5-minute stability run (item 9)
@@ -162,6 +162,6 @@ vehicle before signing off.
   `CommandMapper` both take `now` as a parameter precisely so timing
   behaviour can be tested instantly and deterministically.
 * Use `wait_until(...)` from `test_integration.py` for anything genuinely
-  concurrent — never a bare `sleep` followed by an assertion.
+  concurrent. Never a bare `sleep` followed by an assertion.
 * Test the failure path too. Half of these tests check that the vehicle
   *stops*, which is the behaviour that actually matters.

@@ -25,9 +25,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from signal_processor import BlinkEvent, ProcessedSignal
+
+if TYPE_CHECKING:  # imported for typing only, so vision stays an optional extra
+    from vision import GestureEvent
 
 
 class Command(str, Enum):
@@ -95,6 +98,7 @@ class CommandMapper:
         blink_mode: str = "alternate",
         first_turn_direction: str = "LEFT",
         require_good_signal: bool = True,
+        turn_source: str = "blink",
     ) -> None:
         if attention_stop_threshold >= attention_forward_threshold:
             raise ValueError(
@@ -103,6 +107,8 @@ class CommandMapper:
             )
         if blink_mode not in ("alternate", "single_double"):
             raise ValueError(f"unknown blink_mode: {blink_mode!r}")
+        if turn_source not in ("blink", "vision", "both"):
+            raise ValueError(f"unknown turn_source: {turn_source!r}")
 
         self.forward_threshold = attention_forward_threshold
         self.stop_threshold = attention_stop_threshold
@@ -110,6 +116,7 @@ class CommandMapper:
         self.turn_repeat_s = turn_command_repeat_ms / 1000.0
         self.blink_mode = blink_mode
         self.require_good_signal = require_good_signal
+        self.turn_source = turn_source
 
         self._first_turn = Command[first_turn_direction]
         self._next_turn = self._first_turn
@@ -142,8 +149,23 @@ class CommandMapper:
 
     # -- main entry point ---------------------------------------------------
 
-    def update(self, processed: ProcessedSignal, now: float) -> Command:
-        """Fold one conditioned signal into the policy and return a command."""
+    def update(
+        self,
+        processed: ProcessedSignal,
+        now: float,
+        gestures: Optional[List["GestureEvent"]] = None,
+    ) -> Command:
+        """Fold one conditioned signal into the policy and return a command.
+
+        ``gestures`` carries accepted webcam raises for this cycle. It stays
+        optional so every existing caller and test keeps working unchanged,
+        and it is ignored unless ``turn_source`` admits vision.
+
+        Gestures are deliberately gated behind the same safety checks as
+        blinks. No arm, no trustworthy EEG, no turning: a hand raise must not
+        be able to move a vehicle whose operator the headset has lost track
+        of (EEG-05, SF-03).
+        """
         if not self._armed:
             self._base = Command.STOP
             self._clear_turn()
@@ -160,7 +182,13 @@ class CommandMapper:
             return Command.STOP
 
         self._apply_attention_policy(processed.attention, now)
-        self._apply_blink_events(processed.blink_events, now)
+        if self.turn_source in ("blink", "both"):
+            self._apply_blink_events(processed.blink_events, now)
+        if gestures and self.turn_source in ("vision", "both"):
+            # Applied second, so a hand raise wins a tie against a blink that
+            # landed in the same 50 ms cycle. Raising an arm is deliberate;
+            # a blink can be involuntary.
+            self._apply_gesture_events(gestures, now)
 
         if self._turn_command is not None:
             if now < self._turn_until:
@@ -224,6 +252,19 @@ class CommandMapper:
             self._turn_until = now + self.turn_repeat_s
             self._turns_issued += 1
             self._reason = f"{event.value.lower()} blink -> {direction.value}"
+
+    def _apply_gesture_events(self, events, now: float) -> None:
+        """Turn accepted hand raises into turn pulses.
+
+        Unlike blinks, there is nothing to decide here. The user raised a
+        specific hand and the mapping is theirs: right hand, right turn.
+        """
+        for event in events:
+            direction = Command[event.gesture.value]
+            self._turn_command = direction
+            self._turn_until = now + self.turn_repeat_s
+            self._turns_issued += 1
+            self._reason = f"{direction.value.lower()} hand raised -> {direction.value}"
 
     def _direction_for(self, event: BlinkEvent) -> Command:
         if self.blink_mode == "single_double":
@@ -305,4 +346,5 @@ def create_mapper(config) -> CommandMapper:
         blink_mode=section.get("blink_mode", "alternate"),
         first_turn_direction=section.get("first_turn_direction", "LEFT"),
         require_good_signal=section.get("require_good_signal", True),
+        turn_source=section.get("turn_source", "blink"),
     )

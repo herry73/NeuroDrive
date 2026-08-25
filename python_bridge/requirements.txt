@@ -17,3 +17,14 @@ pyserial>=3.5
 # Test runner. The suite also runs under `python -m unittest`, so this is
 # convenience rather than a hard requirement.
 pytest>=7.0
+
+# Webcam gesture control (vision.py) needs two more packages. They are left
+# out of this file on purpose: vision.py imports them lazily inside its own
+# thread, so the bridge runs on a machine that has neither, as long as
+# control.turn_source stays on "blink". Install them only on the laptop that
+# will actually run the camera:
+#
+#     pip install mediapipe opencv-python
+#
+# The pose model is not a pip package. See vision.README.md for the one-line
+# download into python_bridge/models/.

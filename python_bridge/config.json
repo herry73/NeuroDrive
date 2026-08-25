@@ -39,10 +39,33 @@
     }
   },
 
+  "vision": {
+    "_readme": "Webcam gesture input. The user raises a hand, the vehicle turns that way. Needs mediapipe and the model in models/. Set control.turn_source to vision or both to actually use it.",
+    "enabled": false,
+    "camera_index": 0,
+    "width": 640,
+    "height": 480,
+    "fps_limit": 15,
+    "model_path": "models/pose_landmarker_lite.task",
+    "_raise_margin": "How far above the shoulder the wrist must be, as a fraction of frame height. Raise it if a resting hand triggers turns.",
+    "raise_margin": 0.05,
+    "min_visibility": 0.6,
+    "_hold_frames": "Consecutive frames a raise must persist before it counts. Raise it if a hand passing through the frame fires a turn.",
+    "hold_frames": 3,
+    "refractory_ms": 1200,
+    "_repeat_while_held_ms": "0 = one raise, one turn. Above 0, holding the arm up repeats the turn this often.",
+    "repeat_while_held_ms": 0,
+    "_swap_sides": "Set true only if the turns come out inverted. MediaPipe labels landmarks anatomically, so it should not be needed.",
+    "swap_sides": false,
+    "preview": false
+  },
+
   "control": {
     "attention_forward_threshold": 60,
     "attention_stop_threshold": 40,
     "attention_stop_hold_ms": 1000,
+    "_turn_source": "blink = turn on eye blinks (default) | vision = turn on raised hands | both",
+    "turn_source": "blink",
     "_blink_mode": "alternate = each blink turns the other way | single_double = one blink LEFT, two blinks RIGHT",
     "blink_mode": "alternate",
     "first_turn_direction": "LEFT",

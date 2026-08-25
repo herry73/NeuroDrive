@@ -35,6 +35,7 @@ from eeg_reader import EEGReader
 from eeg_sources import create_source
 from keyboard_input import KEY_COMMANDS, KeyboardReader
 from signal_processor import ProcessedSignal, create_processor
+from vision import create_vision
 from wifi_sender import CommandSender, TransportError, create_transport
 
 LOG = logging.getLogger("neurodrive.main")
@@ -112,6 +113,7 @@ class Bridge:
         self.keyboard = KeyboardReader(
             enabled=config.get("ui.keyboard_override", True) and not args.no_keyboard
         )
+        self.vision = create_vision(config)
         self.recorder = SessionRecorder(config, self.run_id)
         self.manual = ManualController(
             turn_repeat_s=config.get("control.turn_command_repeat_ms", 150) / 1000.0
@@ -136,6 +138,7 @@ class Bridge:
             return 2
 
         self.reader.start()
+        self.vision.start()
         self.keyboard.start()
         self.running = True
         self._started_at = time.monotonic()
@@ -182,6 +185,7 @@ class Bridge:
         except Exception:  # pragma: no cover - best effort on the way out
             LOG.exception("error stopping sender")
         self.reader.stop()
+        self.vision.stop()
         self.keyboard.stop()
         self.recorder.close()
         self._print_summary()
@@ -200,6 +204,13 @@ class Bridge:
         print(f"    Packets sent     : {stats.packets_sent} "
               f"({stats.commands_changed} changes, {stats.keepalives} keepalives)")
         print(f"    Acks received    : {stats.acks_received}")
+        vinfo = self.vision.info
+        if vinfo.enabled:
+            seen = (100.0 * vinfo.pose_frames / vinfo.frames) if vinfo.frames else 0.0
+            print(f"    Hand gestures    : {vinfo.gestures} "
+                  f"({vinfo.frames} frames, user visible in {seen:.0f}%)")
+            if vinfo.last_error:
+                print(f"    Vision warning   : {vinfo.last_error}")
         if stats.avg_rtt_ms is not None:
             print(f"    Round trip       : avg {stats.avg_rtt_ms:.1f} ms, "
                   f"max {stats.max_rtt_ms:.1f} ms")
@@ -224,11 +235,13 @@ class Bridge:
                 self.processor.ingest(sample)
             processed = self.processor.tick(now)
 
+            gestures = self.vision.read_all()
+
             self._handle_keys(now)
             if not self.running:
                 break
 
-            command, reason = self._decide(processed, now)
+            command, reason = self._decide(processed, now, gestures)
             self.sender.send(command)
             self.recorder.log_cycle(processed, command, reason, samples)
             self._render(processed, now)
@@ -247,7 +260,7 @@ class Bridge:
                 next_tick = time.monotonic()
             self._update_loop_rate(now)
 
-    def _decide(self, processed: ProcessedSignal, now: float):
+    def _decide(self, processed: ProcessedSignal, now: float, gestures=None):
         """Return the command to transmit this cycle and why."""
         if self.calibrator is not None:
             self.calibrator.feed(processed)
@@ -261,10 +274,10 @@ class Bridge:
             command = self.manual.command(now)
             # Keep the mapper's state fresh so switching back is seamless,
             # but ignore what it wants while the operator is driving.
-            self.mapper.update(processed, now)
+            self.mapper.update(processed, now, gestures)
             return command, self.manual.reason
 
-        command = self.mapper.update(processed, now)
+        command = self.mapper.update(processed, now, gestures)
         return command, self.mapper.state(now).reason
 
     def _finish_calibration(self) -> None:
@@ -335,6 +348,7 @@ class Bridge:
             elapsed_s=now - self._started_at,
             loop_hz=self._loop_hz,
             override_active=self.override_active,
+            vision_info=self.vision.info,
         )
 
     def _update_loop_rate(self, cycle_started: float) -> None:
@@ -384,6 +398,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--keyboard", action="store_true", help="start in keyboard override mode"
     )
     parser.add_argument(
+        "--vision",
+        action="store_true",
+        help="turn with raised hands from the webcam (implies --turn-source vision)",
+    )
+    parser.add_argument(
+        "--vision-preview",
+        action="store_true",
+        help="show the camera window with the tracked shoulders and wrists",
+    )
+    parser.add_argument(
+        "--turn-source",
+        choices=["blink", "vision", "both"],
+        help="what produces LEFT/RIGHT (shortcut for --set control.turn_source=...)",
+    )
+    parser.add_argument(
         "--skip-calibration", action="store_true", help="arm the vehicle immediately"
     )
     parser.add_argument(
@@ -415,6 +444,21 @@ def apply_cli_overrides(config, args) -> None:
         config.set("transport.udp.esp32_ip", args.esp32_ip)
     if args.esp32_port:
         config.set("transport.udp.esp32_port", args.esp32_port)
+    if args.turn_source:
+        config.set("control.turn_source", args.turn_source)
+    if args.vision_preview:
+        config.set("vision.preview", True)
+    if args.vision or args.vision_preview:
+        config.set("vision.enabled", True)
+        if not args.turn_source:
+            # --vision on its own means "turn with my hands". Asking for both
+            # is still possible, it just has to be said explicitly.
+            config.set("control.turn_source", "vision")
+    if args.turn_source in ("vision", "both"):
+        # Only the flag auto-enables. A config.json that asks for vision turns
+        # while leaving the camera off is a mistake worth reporting, not one
+        # worth silently repairing.
+        config.set("vision.enabled", True)
 
 
 def main(argv=None) -> int:

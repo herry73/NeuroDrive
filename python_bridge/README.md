@@ -58,9 +58,9 @@ python main.py --print-config                   # show the merged config, exit
 └────────────────────────────────────────────────────────────────
 ```
 
-Put this on the projector during the demo. Watching the attention bar cross
-the threshold at the moment the vehicle starts moving is what makes the
-system legible to an audience (plan section 12.3).
+Put this on the projector during the demo. The attention bar crossing the
+threshold at the exact moment the vehicle starts moving is the one thing that
+makes the system readable to an audience (plan section 12.3).
 
 ---
 
@@ -86,20 +86,20 @@ Full API signatures: [`../docs/INTERFACE_CONTRACT.md`](../docs/INTERFACE_CONTRAC
 
 ### Why the split between processor and mapper
 
-The processor answers *"what is the signal doing?"* — smoothing, blink
-detection, quality. The mapper answers *"so what should the vehicle do?"* —
-thresholds, hysteresis, turn timing.
+The processor answers one question: what is the signal doing? Smoothing,
+blink detection, quality. The mapper answers the next one: so what should the
+vehicle do? Thresholds, hysteresis, turn timing.
 
-That boundary is the whole point: retuning the vehicle for a different user
-touches only the mapper's numbers in `config.json`, and never the detection
-code that took M2 weeks to get right.
+That boundary is the whole point. Retuning the vehicle for a different user
+touches only the mapper's numbers in `config.json`, never the detection code
+that took M2 weeks to get right.
 
 ### Threads
 
 | Thread | Why |
 |---|---|
 | `eeg-reader` | A blocking serial read must never stall the control loop |
-| main loop | Owns all policy state — single-threaded, therefore testable |
+| main loop | Owns all policy state. Single-threaded, therefore testable |
 | `cmd-sender` | A router glitch must never stall EEG processing (NFR 3.3) |
 
 They communicate through two queues. No shared mutable state, no locks in the
@@ -128,7 +128,7 @@ replay mode. A good recorded run *is* the fallback demo.
 * Is the headset on, and is its LED solid rather than blinking?
 * On Windows, use the **Outgoing** COM port. Pairing creates two; the
   incoming one will never work.
-* Something else may hold the port — close any other serial monitor.
+* Something else may hold the port. Close any other serial monitor.
 * Check it exists: `python -m serial.tools.list_ports -v`
 
 ### Connected, but attention stays `--`
@@ -136,13 +136,13 @@ replay mode. A good recorded run *is* the fallback demo.
 The headset is streaming but has no good contact. The forehead sensor must
 touch skin (not hair), and the ear clip must be on the earlobe. Watch
 `poor=` on the dashboard: `0` is good, `200` means no contact at all. It
-usually settles within 10–20 seconds of putting it on.
+usually settles within 10-20 seconds of putting it on.
 
 ### The vehicle never moves
 
 1. Is it armed? Calibration takes 15 seconds; the dashboard says
    `calibrating`.
-2. Is `sent=` climbing? If not, the mapper is holding STOP — read the reason
+2. Is `sent=` climbing? If not, the mapper is holding STOP. Read the reason
    text on the Command line.
 3. Is `ack=` climbing? If `sent` climbs but `ack` does not, packets are not
    reaching the vehicle. Check the laptop joined the ESP32's network, and
@@ -151,9 +151,9 @@ usually settles within 10–20 seconds of putting it on.
 
 ### The vehicle moves but will not stop
 
-Press the hardware kill switch. Then: the watchdog should stop it within 2
-seconds of the bridge quitting — if it does not, the firmware is not running
-the current build, or `WATCHDOG_TIMEOUT_MS` was changed.
+Press the hardware kill switch. The watchdog should then stop it within 2
+seconds of the bridge quitting. If it does not, the firmware is not running
+the current build, or someone changed `WATCHDOG_TIMEOUT_MS`.
 
 ### Turns are too long or too short
 

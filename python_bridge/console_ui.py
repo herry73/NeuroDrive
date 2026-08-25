@@ -151,6 +151,7 @@ class Dashboard:
         elapsed_s: float,
         loop_hz: float,
         override_active: bool,
+        vision_info=None,
         force: bool = False,
     ) -> None:
         if not self.enabled:
@@ -170,6 +171,7 @@ class Dashboard:
             loop_hz,
             override_active,
             now,
+            vision_info,
         )
         self._draw(lines)
 
@@ -184,6 +186,7 @@ class Dashboard:
         loop_hz,
         override_active,
         now,
+        vision_info=None,
     ) -> List[str]:
         width = min(shutil.get_terminal_size((100, 24)).columns, 100)
         rule = self.glyphs["rule"] * max(20, width - 2)
@@ -228,12 +231,43 @@ class Dashboard:
             f"ack={sender_stats.acks_received:<6} rtt={rtt_text} avg={avg_text}",
             f"  Session  mode={mode}  up={self._duration(elapsed_s)}  loop={loop_hz:4.1f}Hz  "
             f"turns={mapper_state.turns_issued}  safe-stops={mapper_state.safe_stops}",
+            *self._vision_line(vision_info),
             f"  Keys     {self._c('up', 'white')}=fwd {self._c('left/right', 'white')}=turn "
             f"{self._c('down/space', 'white')}=stop  k=override  c=recalibrate  q=quit"
             + (f"   {self._c(notice, 'yellow')}" if notice else ""),
             self._c(
                 self.glyphs["corner_bottom"] + rule[: max(0, width - 2)], "bold"
             ),
+        ]
+
+    def _vision_line(self, info) -> List[str]:
+        """One row for the camera, or nothing at all when it is switched off.
+
+        Returned as a list so the caller can splat it: a disabled camera adds
+        no row rather than an empty one.
+        """
+        if info is None or not getattr(info, "enabled", False):
+            return []
+
+        if not info.running:
+            label, colour = "OFFLINE", "red"
+            detail = info.last_error[:40] or "starting"
+        elif info.raised:
+            label, colour = f"{info.raised} HAND", "green"
+            detail = "raised"
+        elif info.pose_frames:
+            label, colour = "WATCHING", "cyan"
+            detail = "no hand raised"
+        else:
+            label, colour = "NO USER", "yellow"
+            detail = "step into the frame"
+
+        # Pad inside the colour call: the escape codes are invisible on screen
+        # but very much visible to a format spec's width count.
+        return [
+            f"  Vision   {self._c(f'{label:<12}', colour)} "
+            f"{self._c(f'{detail:<22}', 'grey')} "
+            f"gestures={info.gestures:<4} {info.fps:4.1f}fps"
         ]
 
     def _attention_bar(self, attention, mapper_state, width: int) -> str:

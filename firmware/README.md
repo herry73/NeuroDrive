@@ -19,7 +19,7 @@ Copy-Item secrets.h.example secrets.h     # bash: cp secrets.h.example secrets.h
 ```
 
 `secrets.h` holds the WiFi credentials and is git-ignored. The build fails
-without it — deliberately, so nobody accidentally commits a password.
+without it, on purpose, so nobody commits a password by accident.
 
 ### Arduino IDE
 
@@ -48,8 +48,8 @@ pio device monitor     # serial monitor
 | GPIO 26 | L298N IN2 | Left direction B |
 | GPIO 27 | L298N IN3 | Right direction A |
 | GPIO 14 | L298N IN4 | Right direction B |
-| GPIO 32 | L298N ENA | Left PWM — **remove the jumper** |
-| GPIO 33 | L298N ENB | Right PWM — **remove the jumper** |
+| GPIO 32 | L298N ENA | Left PWM. **Remove the jumper** |
+| GPIO 33 | L298N ENB | Right PWM. **Remove the jumper** |
 | GPIO 4 | E-stop button → GND | `INPUT_PULLUP`; no resistor needed |
 | GPIO 2 | Built-in LED | Link heartbeat |
 | GPIO 19 / 18 / 5 | Green / yellow / red LED | Through 220 Ω to GND |
@@ -63,7 +63,7 @@ pio device monitor     # serial monitor
                   └── Buck converter ── 5 V ── ESP32 VIN
 ```
 
-Three rules, in order of how expensive it is to break them:
+Three rules, most expensive to break first:
 
 1. **Motors are never powered from an ESP32 pin.** A stalled motor draws far
    more than a GPIO can supply, and the ESP32 will not survive it (NFR 3.4).
@@ -80,9 +80,9 @@ gets hot and sags under motor load. Use a separate buck converter.
 GPIO 4 is the **signalling** half: the firmware latches STOP and refuses
 movement commands while the button is held.
 
-That is not sufficient on its own. The plan requires the emergency stop to
-**physically interrupt the motor supply** as well — a switch in the battery
-line. Firmware can hang; a switch cannot. Wire both.
+That is not enough on its own. The plan requires the emergency stop to
+**physically interrupt the motor supply** as well, with a switch in the
+battery line. Firmware can hang. A switch cannot. Wire both.
 
 ---
 
@@ -113,8 +113,8 @@ Two rules that are easy to get wrong and are covered by the tests:
   re-sends every 250 ms as a keepalive; without this rule a 300 ms turn
   would never end.
 * **`FORWARD` received mid-turn does not cancel the turn.** It updates the
-  state the turn returns to. `STOP`, by contrast, applies immediately —
-  stopping is always allowed to interrupt.
+  state the turn returns to. `STOP`, by contrast, applies immediately.
+  Stopping is always allowed to interrupt.
 
 Full specification: [`../docs/INTERFACE_CONTRACT.md`](../docs/INTERFACE_CONTRACT.md).
 
@@ -125,7 +125,7 @@ Full specification: [`../docs/INTERFACE_CONTRACT.md`](../docs/INTERFACE_CONTRACT
 | Green | Driving forward |
 | Yellow | Turning |
 | Red, solid | Stopped on command |
-| Red, slow blink | Stopped by the watchdog — no commands arriving |
+| Red, slow blink | Stopped by the watchdog. No commands arriving |
 | Red, fast blink | Emergency stop latched |
 | Built-in, solid | Commands are arriving |
 | Built-in, slow blink | Waiting for the first command |
@@ -146,7 +146,7 @@ watchdog visible without anyone reading a screen.
 | `TURN_STYLE_PIVOT` | 1 | 1 = counter-rotate, 0 = inside wheel stopped |
 | `TURN_PULSE_MS` | 300 | Turn duration (MV-03) |
 | `WATCHDOG_TIMEOUT_MS` | 2000 | Stop if no command arrives (SF-02) |
-| `WIFI_MODE_AP` | 1 | 1 = the ESP32 makes its own network |
+| `WIFI_USE_AP` | 1 | 1 = the ESP32 makes its own network |
 | `UDP_COMMAND_PORT` | 4210 | Must match `transport.udp.esp32_port` |
 
 ### Driving straight
@@ -159,16 +159,16 @@ the vehicle drifts and reduce that side's trim:
 #define TRIM_RIGHT_PCT 92   // right motor was faster; slow it down
 ```
 
-Adjust in steps of 5, re-flash, re-test. Record the values you settle on —
-that measurement is M6's Week 2 deliverable.
+Adjust in steps of 5, re-flash, re-test. Record the values you settle on.
+That measurement is M6's Week 2 deliverable.
 
 ### AP mode versus station mode
 
 **AP mode (default).** The ESP32 creates its own network. The laptop joins
 it, the vehicle is always `192.168.4.1`, and no venue WiFi is involved. Use
-this for the demo — it removes an entire category of failure.
+this for the demo. It removes an entire category of failure.
 
-**Station mode** (`WIFI_MODE_AP 0`). The ESP32 joins an existing network. It
+**Station mode** (`WIFI_USE_AP 0`). The ESP32 joins an existing network. It
 prints its IP at boot; put that in `python_bridge/config.json`. Needed only
 if the laptop must stay on the internet at the same time.
 
@@ -178,8 +178,8 @@ if the laptop must stay on the internet at the same time.
 
 ### It will not compile
 
-* `secrets.h: No such file` — copy `secrets.h.example` first.
-* `ledcSetup was not declared` — you are on core 3.x and the compatibility
+* `secrets.h: No such file`. Copy `secrets.h.example` first.
+* `ledcSetup was not declared`. You are on core 3.x and the compatibility
   shim did not engage. Check `ESP_ARDUINO_VERSION_MAJOR` is defined; update
   the ESP32 core to at least 2.0.3.
 
@@ -195,7 +195,7 @@ that fails, lower `upload_speed` to `115200` in `platformio.ini`.
    common?
 3. Does the serial monitor show `[state] FORWARD`? If yes, the fault is
    electrical, not in software.
-4. Raise `MIN_MOVE_DUTY` — the motors may be stalling at low duty.
+4. Raise `MIN_MOVE_DUTY`. The motors may be stalling at low duty.
 
 ### One motor runs backwards
 
@@ -205,7 +205,7 @@ software; the wiring should match the pin map.
 ### It moves, then stops after ~2 seconds
 
 That is the watchdog working correctly. Commands stopped arriving. Either the
-bridge is not running, or the packets are not reaching the vehicle — check
+bridge is not running, or the packets are not reaching the vehicle. Check
 the network and `esp32_ip`.
 
 ### Nothing arrives over WiFi
@@ -215,8 +215,8 @@ python ..\python_bridge\udp_test_sender.py --ping --esp32-ip 192.168.4.1
 ```
 
 If that fails: is the laptop on the ESP32's network? Is a firewall blocking
-outbound UDP 4210? As a fallback, use the USB cable — `transport.mode` to
-`serial` — and carry on working.
+outbound UDP 4210? As a fallback, set `transport.mode` to `serial`, use the
+USB cable, and carry on working.
 
 ### Debugging without the bridge
 

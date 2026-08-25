@@ -55,10 +55,26 @@ DEFAULTS: Dict[str, Any] = {
             "refractory_ms": 400,
         },
     },
+    "vision": {
+        "enabled": False,
+        "camera_index": 0,
+        "width": 640,
+        "height": 480,
+        "fps_limit": 15,
+        "model_path": "models/pose_landmarker_lite.task",
+        "raise_margin": 0.05,
+        "min_visibility": 0.6,
+        "hold_frames": 3,
+        "refractory_ms": 1200,
+        "repeat_while_held_ms": 0,
+        "swap_sides": False,
+        "preview": False,
+    },
     "control": {
         "attention_forward_threshold": 60,
         "attention_stop_threshold": 40,
         "attention_stop_hold_ms": 1000,
+        "turn_source": "blink",
         "blink_mode": "alternate",
         "first_turn_direction": "LEFT",
         "turn_command_repeat_ms": 150,
@@ -192,6 +208,20 @@ class Config:
         mode = self.get("transport.mode")
         if mode not in ("udp", "serial"):
             problems.append(f"transport.mode must be udp or serial (got {mode!r})")
+
+        turn_source = self.get("control.turn_source")
+        if turn_source not in ("blink", "vision", "both"):
+            problems.append(
+                f"control.turn_source must be blink/vision/both (got {turn_source!r})"
+            )
+        if turn_source in ("vision", "both") and not self.get("vision.enabled"):
+            problems.append(
+                "control.turn_source wants the camera, so vision.enabled must be true"
+            )
+
+        hold_frames = self.get("vision.hold_frames")
+        if not isinstance(hold_frames, int) or hold_frames < 1:
+            problems.append("vision.hold_frames must be an integer of at least 1")
 
         forward = self.get("control.attention_forward_threshold")
         stop = self.get("control.attention_stop_threshold")

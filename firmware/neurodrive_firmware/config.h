@@ -99,7 +99,18 @@
 // Set to 1 to run the ESP32 as its own access point. This is the most
 // reliable demo option: no venue WiFi, no DHCP surprises, and the vehicle
 // always has the same address (192.168.4.1).
-#define WIFI_MODE_AP 1
+//
+// Not named WIFI_MODE_AP: that is already an enumerator of the ESP-IDF
+// wifi_mode_t, and WiFiType.h defines WIFI_AP as an alias for it. A macro
+// of that name expands inside WiFi.mode(WIFI_AP) and breaks the build.
+#define WIFI_USE_AP 1
+
+// 2.4 GHz channel the access point broadcasts on. The Arduino default is 1,
+// which is the busiest channel in most buildings; on a campus the ESP32's
+// trace antenna loses to the dozens of stronger APs sharing it and the SSID
+// never appears in the laptop's scan list. 1, 6 and 11 are the only three
+// that do not overlap, so pick whichever of those is quietest at the venue.
+#define WIFI_AP_CHANNEL 6
 
 // Station-mode static IP. Leave WIFI_USE_STATIC_IP at 0 for DHCP; if you
 // enable it, make sure the address is outside your router's DHCP pool.

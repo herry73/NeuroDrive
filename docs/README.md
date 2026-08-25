@@ -7,7 +7,7 @@
 | `diagrams/` | M8 | Wiring diagram, communication sequence, signal flow |
 | `report/` | M8 | Technical report drafts and the final PDF |
 
-The three empty directories are placeholders for M8's Week 2–5 deliverables.
+The three empty directories are placeholders for M8's Week 2-5 deliverables.
 Diagrams belong in version control as both the editable `.xml` and the
 exported `.png`, so the source stays editable and the image stays viewable in
 the GitHub README.
@@ -25,7 +25,7 @@ should be cited rather than paraphrased:
 | Firmware design | `firmware/README.md`, header comments in `motor_control.h` |
 | Safety architecture | `README.md` § safety, `firmware/neurodrive_firmware/safety.cpp` |
 | Test methodology and results | `tests/README.md`, output of `tests/latency_benchmark.py` |
-| Latency figures | `latency_benchmark.py` — report the three legs separately |
+| Latency figures | `latency_benchmark.py`. Report the three legs separately |
 
 ## A note on the latency claim
 
@@ -35,6 +35,6 @@ so roughly 500 ms of the brain-to-wheels figure belongs to the headset and
 not to anything the team wrote.
 
 Report the legs separately. A single number that quietly excludes the headset
-is the kind of claim an evaluator will probe, and the honest version is more
-impressive anyway: it shows the team measured the system rather than the part
-that flattered it.
+is the kind of claim an evaluator will probe. The honest version is better
+anyway. It shows the team measured the whole system, not just the part that
+flattered it.
