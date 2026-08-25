@@ -221,3 +221,4 @@ python tests\mock_eeg_generator.py --scenario demo --duration 90 `
 | [`python_bridge/config.README.md`](python_bridge/config.README.md) | Every configuration key, and how to tune it |
 | [`firmware/README.md`](firmware/README.md) | Flashing, wiring, and firmware troubleshooting |
 | [`tests/README.md`](tests/README.md) | The test plan and how to run it |
+ 
