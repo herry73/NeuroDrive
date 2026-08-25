@@ -2,9 +2,9 @@
 Webcam gesture input: which hand is the user holding up?
 
 Requirement coverage:
-    CV-01  A camera feed is acquired and processed on the laptop.
+    CV-01  The laptop acquires and processes a camera feed.
     MV-01  Produces the LEFT and RIGHT movement commands.
-    SP-06  Gestures are debounced, so one raise means one turn.
+    SP-06  Debounces gestures, so one raise means one turn.
     NFR 3.3  All camera work happens off the control loop's thread.
 
 Why pose landmarks rather than hand detection
@@ -12,13 +12,13 @@ Why pose landmarks rather than hand detection
 The question is not "where is a hand" but "which of *this person's* hands is
 up", and that needs the shoulders as a reference. MediaPipe's pose model
 labels landmarks anatomically: index 15 is the subject's own left wrist,
-whichever side of the frame it appears on. That sidesteps the mirror trap
-entirely. A webcam pointed at a user shows a mirrored image, so a naive
-"hand on the left of the frame means left" rule turns the vehicle the wrong
-way every single time, and it does so consistently enough that it looks
-correct until someone checks.
+whichever side of the frame it appears on. That sidesteps the mirror trap. A webcam
+pointed at a user shows a mirrored image, so a naive "hand on the left of
+the frame means left" rule turns the vehicle the wrong way every single
+time, and it does so consistently enough to look correct until someone
+checks.
 
-The decision itself is one comparison per arm: a wrist above its own
+The decision itself is one comparison per arm. A wrist above its own
 shoulder means that arm is raised. It is scale invariant, needs no
 calibration, and works at any sensible distance from the camera.
 

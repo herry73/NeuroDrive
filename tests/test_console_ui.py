@@ -4,7 +4,7 @@ Tests for the console dashboard (UI-01, EEG-06).
 The dashboard is presentation code, but it runs on every cycle of every run,
 so a crash in it takes the vehicle's control loop down with it. These tests
 cover exactly that: that it renders without raising, on any terminal, for
-every state the bridge can be in -- including the states with missing data.
+every state the bridge can be in, including the states with missing data.
 """
 
 import _bootstrap  # noqa: F401

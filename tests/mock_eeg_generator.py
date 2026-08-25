@@ -3,9 +3,9 @@ Mock EEG data generator (M7, Week 1 deliverable).
 
 Two jobs:
 
-1. A library the tests use to produce deterministic EEG input -- either as
+1. A library the tests use to produce deterministic EEG input, either as
    :class:`~eeg_sources.EEGSample` objects or as a genuine ThinkGear byte
-   stream, so the real parser is exercised rather than bypassed.
+   stream, so the tests run the real parser instead of bypassing it.
 
 2. A command-line tool that writes a session CSV. That file feeds
    ``ReplaySource``, which is Fallback Level 2 in the demo strategy: a
@@ -54,7 +54,7 @@ def attention_smooth(t: float, rng: random.Random, period: float = 20.0) -> int:
 
 
 def attention_flat(t: float, rng: random.Random) -> int:
-    """A user who never concentrates -- the vehicle should never move."""
+    """A user who never concentrates. The vehicle should never move."""
     return _clamp(25 + rng.gauss(0, 4))
 
 
@@ -304,7 +304,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"  wrote {len(data)} bytes of ThinkGear stream to {args.thinkgear_out}")
 
     if not args.out and not args.thinkgear_out and not args.preview:
-        print("  (nothing written -- pass --out, --thinkgear-out or --preview)")
+        print("  (nothing written. Pass --out, --thinkgear-out or --preview)")
     return 0
 
 

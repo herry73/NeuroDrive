@@ -10,7 +10,7 @@ Why it exists:
 * M5 and M7 can test the bridge end to end before the vehicle is wired, and
   on any laptop, in CI, or on the train.
 * It is the executable check that the two halves of the interface contract
-  actually agree -- ``test_integration.py`` drives the real bridge modules
+  actually agree. ``test_integration.py`` drives the real bridge modules
   into this simulator and asserts on the states it reaches.
 * On demo day it is a fast way to prove "the laptop side is fine" when
   something goes wrong with the hardware.
@@ -87,7 +87,7 @@ class VehicleStats:
 class VehicleModel:
     """The firmware's state machine, in Python.
 
-    Deliberately mirrors ``motor_control.cpp`` line for line in behaviour --
+    Mirrors ``motor_control.cpp`` line for line in behaviour, on purpose,
     including the rule that re-sending the turn already in progress does not
     restart its timer.
     """
@@ -144,7 +144,7 @@ class VehicleModel:
         if requested is MotorState.STOP:
             self.base_state = MotorState.STOP
             # An explicit STOP clears a WATCHDOG reason, but never a latched
-            # e-stop -- the button decides when that clears.
+            # e-stop. The button decides when that clears.
             if not self.estop_latched:
                 self.stop_reason = StopReason.COMMAND
             self._enter(MotorState.STOP, char, now)

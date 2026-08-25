@@ -10,7 +10,7 @@ Requirement coverage:
                and hands samples over through a thread-safe queue.
 
 The reader owns an :class:`~eeg_sources.EEGSource` and nothing else. It does
-no thresholding and no smoothing -- that is the signal processor's job.
+no thresholding and no smoothing. That is the signal processor's job.
 """
 
 from __future__ import annotations
@@ -268,7 +268,7 @@ class EEGReader:
                     self._signal_lost_announced = True
                     self._update(status=ReaderStatus.SIGNAL_LOST)
                     LOG.warning(
-                        "no EEG samples for %.1f s -- signalling loss",
+                        "no EEG samples for %.1f s, signalling loss",
                         now - self._last_sample_time,
                     )
                     self._emit_disconnected()

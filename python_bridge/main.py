@@ -1,5 +1,5 @@
 """
-NeuroDrive bridge -- application entry point.
+NeuroDrive bridge application entry point.
 
 Wires the five modules together and runs the control loop:
 
@@ -161,7 +161,7 @@ class Bridge:
         else:
             # Not fatal: the reader keeps retrying, and the vehicle simply
             # stays stopped until real samples arrive (EEG-05).
-            print("  WARNING: no EEG connection yet -- the vehicle will not move.")
+            print("  WARNING: no EEG connection yet. The vehicle will not move.")
             print(f"           {self.reader.info.last_error}")
             print("           Press 'k' for keyboard override.")
 
@@ -169,11 +169,11 @@ class Bridge:
         seconds = float(self.config.get("control.calibration_seconds", 15))
         if self.args.skip_calibration or seconds <= 0:
             self.mapper.arm()
-            print("  Calibration skipped -- vehicle is ARMED.\n")
+            print("  Calibration skipped. Vehicle is ARMED.\n")
             return
         self.calibrator = Calibrator(seconds)
         self.mapper.disarm()
-        print(f"  Calibrating for {seconds:.0f}s -- the vehicle will not move.\n")
+        print(f"  Calibrating for {seconds:.0f}s. The vehicle will not move.\n")
 
     def _shutdown(self) -> None:
         self.running = False
@@ -272,7 +272,7 @@ class Bridge:
 
         if self.override_active:
             command = self.manual.command(now)
-            # Keep the mapper's state fresh so switching back is seamless,
+            # Keep the mapper's state fresh so switching back is clean,
             # but ignore what it wants while the operator is driving.
             self.mapper.update(processed, now, gestures)
             return command, self.manual.reason
@@ -335,7 +335,7 @@ class Bridge:
                 # Software emergency stop while under EEG control. The
                 # hardware button (SF-01) remains the authoritative one.
                 self.mapper.disarm()
-                self.dashboard.notify("SOFT E-STOP -- press ENTER to re-arm", 6.0)
+                self.dashboard.notify("SOFT E-STOP. Press ENTER to re-arm", 6.0)
                 LOG.warning("soft e-stop triggered from keyboard")
 
     def _render(self, processed: ProcessedSignal, now: float) -> None:

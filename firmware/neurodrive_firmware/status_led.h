@@ -6,7 +6,7 @@
  *
  *   Green  (GPIO 19)  driving forward
  *   Yellow (GPIO 18)  turning
- *   Red    (GPIO 5)   stopped -- solid on command, blinking on watchdog,
+ *   Red    (GPIO 5)   stopped. Solid on command, blinking on watchdog,
  *                     fast blink when the emergency stop is latched
  *   Built-in (GPIO 2) link heartbeat: solid when the host is talking to us,
  *                     slow blink while waiting for the first command

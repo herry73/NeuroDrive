@@ -1,7 +1,7 @@
 """
 Camera and gesture tuning, with no headset and no vehicle.
 
-The counterpart to ``udp_test_sender.py``: that one exercises the link
+The counterpart to ``udp_test_sender.py``. That one exercises the link
 without the EEG, this one exercises the camera without either. Use it to
 frame the shot, check the lighting, and confirm that raising a hand fires
 exactly one gesture before you put any of it in front of an audience.

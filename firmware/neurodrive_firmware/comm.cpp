@@ -172,7 +172,7 @@ static void startStation() {
     Serial.print(F("[wifi] put this address in python_bridge/config.json "
                    "as transport.udp.esp32_ip\n"));
   } else {
-    Serial.println(F("[wifi] NOT connected -- falling back to serial control"));
+    Serial.println(F("[wifi] NOT connected. Falling back to serial control"));
     Serial.println(F("[wifi] set transport.mode=\"serial\" in config.json"));
   }
 }

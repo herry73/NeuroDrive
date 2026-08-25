@@ -9,12 +9,12 @@ Requirement coverage:
     SF-03  Poor-signal values above the cutoff mark the signal unusable.
 
 Scope boundary (see plan section 4.4): this module conditions the signal and
-detects *events*. It contains no driving policy -- deciding that "attention
-above 60 means go forward" belongs to :mod:`command_mapper`, so thresholds
-can be retuned without touching detection code.
+detects *events*. It contains no driving policy. Deciding that "attention
+above 60 means go forward" belongs to :mod:`command_mapper`, so you can
+retune thresholds without touching detection code.
 
-The class is pure: it takes samples and a clock value, and returns state. It
-has no I/O and no threads, which is what makes it directly unit-testable.
+The class is pure. It takes samples and a clock value, and returns state. No
+I/O, no threads, which is what makes it unit-testable on its own.
 """
 
 from __future__ import annotations

@@ -4,8 +4,8 @@ EEG acquisition sources.
 Requirement coverage:
     EEG-01  Bluetooth connection to the MindWave Mobile 2.
     NFR 3.6 The acquisition layer sits behind one small interface
-            (:class:`EEGSource`) so the headset can be swapped for another
-            device -- or for a simulator -- without touching the rest of the
+            (:class:`EEGSource`) so another device, or a simulator, can
+            replace the headset without touching the rest of the
             application.
 
 Three sources ship with the project:
@@ -15,7 +15,7 @@ Three sources ship with the project:
     ``ReplaySource``           plays back a CSV recorded by ``data_logger.py``
 
 ``MockSource`` synthesises genuine ThinkGear packets rather than fabricating
-samples directly, so running in mock mode still exercises the real parser.
+samples, so mock mode still runs the real parser.
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ class EEGSample:
 
     ``attention``/``meditation`` update at roughly 1 Hz (the headset's eSense
     rate). ``blink_strength`` is set only on the sample carrying a blink
-    event, and is ``None`` otherwise -- callers must not treat a missing
-    blink as "strength 0".
+    event, and is ``None`` otherwise. Callers must not treat a missing blink
+    as "strength 0".
     """
 
     timestamp: float

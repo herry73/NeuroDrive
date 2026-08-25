@@ -1,10 +1,10 @@
 /*
- * NeuroDrive -- ESP32 vehicle firmware.
+ * NeuroDrive ESP32 vehicle firmware.
  *
  * Receives movement commands from the Python bridge (over WiFi UDP, or over
  * USB serial as a fallback) and drives a 2WD chassis through an L298N.
  *
- * Architecture -- four modules, each with one job:
+ * Architecture: four modules, each with one job.
  *
  *     safety.*        emergency stop and watchdog        (SF-01, SF-02)
  *     comm.*          UDP + serial receive, ack          (COM-02, COM-04/05)
@@ -91,7 +91,7 @@ void setup() {
   printBanner();
   commSetup();
 
-  Serial.println(F("[boot] ready -- waiting for commands"));
+  Serial.println(F("[boot] ready, waiting for commands"));
 }
 
 void loop() {

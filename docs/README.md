@@ -14,8 +14,8 @@ the GitHub README.
 
 ## Where the technical content already lives
 
-Much of what the report needs is already written down next to the code, and
-should be cited rather than paraphrased:
+Much of what the report needs already sits next to the code. Cite it rather
+than paraphrasing it:
 
 | Report section | Source |
 |---|---|

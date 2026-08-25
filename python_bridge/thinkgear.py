@@ -18,9 +18,9 @@ Each row is ``[EXCODE...] [CODE] ([VLENGTH]) [VALUE...]``. Codes below
 0x80 carry exactly one value byte; codes >= 0x80 are preceded by an
 explicit length byte.
 
-This module is deliberately free of any I/O: it is fed bytes and yields
-decoded rows, which makes it unit-testable without a headset (see
-``tests/test_thinkgear.py``).
+This module deliberately does no I/O. You feed it bytes, it yields decoded
+rows, and ``tests/test_thinkgear.py`` exercises the whole thing without a
+headset.
 """
 
 from __future__ import annotations

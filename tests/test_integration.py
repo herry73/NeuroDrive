@@ -173,7 +173,7 @@ class TestPipelineIntoVehicle(unittest.TestCase):
         self.assertIs(self.vehicle.model.stop_reason, StopReason.ESTOP)
 
         # A STOP arriving while the button is held must not overwrite the
-        # reason -- the indicator has to keep showing ESTOP, not COMMAND.
+        # reason. The indicator has to keep showing ESTOP, not COMMAND.
         self.sender.send(Command.STOP)
         time.sleep(0.2)
         self.assertIs(self.vehicle.model.stop_reason, StopReason.ESTOP)
@@ -243,9 +243,9 @@ class TestFullApplication(unittest.TestCase):
     def test_calibration_phase_holds_the_vehicle_still(self):
         """UI-02: nothing moves for the whole calibration window.
 
-        The calibration window is set well beyond the run duration so the
-        run ends while still calibrating -- otherwise the vehicle legitimately
-        arms in the final milliseconds and the assertion becomes a race.
+        The calibration window sits well beyond the run duration so the run
+        ends while still calibrating. Otherwise the vehicle fairly arms in
+        the final milliseconds and the assertion becomes a race.
         """
         self.run_bridge("--set", "control.calibration_seconds=30")
 
