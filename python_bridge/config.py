@@ -1,8 +1,8 @@
 """
 Configuration loading for the NeuroDrive bridge.
 
-Requirement coverage: SP-07 / NFR 3.5 — every tunable parameter lives in a
-single ``config.json`` and can be changed without touching code.
+Requirement coverage: SP-07 / NFR 3.5. Every tunable parameter lives in a
+single ``config.json``, changeable without touching code.
 
 The loader merges the on-disk file over a full set of built-in defaults, so a
 partial (or missing) ``config.json`` still yields a complete, valid
@@ -271,7 +271,7 @@ def load(path: str | None = None, overrides: list[str] | None = None) -> Config:
     """Load ``config.json``, merged over :data:`DEFAULTS`.
 
     ``overrides`` is a list of ``"dotted.key=value"`` strings from the CLI.
-    A missing file is not an error -- the defaults are used.
+    A missing file is not an error. The loader uses the defaults.
     """
     path = path or CONFIG_PATH
     data = copy.deepcopy(DEFAULTS)

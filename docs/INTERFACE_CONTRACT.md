@@ -3,8 +3,8 @@
 **Owner:** M1 (Project Manager & System Integrator)
 **Status:** v1.0, frozen
 **Change policy:** nothing in this document changes without M1's approval and
-agreement from M2, M3 and M5. Every change requires the affected tests in
-`tests/` to be updated in the same pull request.
+agreement from M2, M3 and M5. Every change must come with updates to the
+affected tests in `tests/`, in the same pull request.
 
 This is the single source of truth for how the parts of NeuroDrive talk to
 each other. If code and this document disagree, that is a bug in one of them.
@@ -47,12 +47,12 @@ firmware processes them in order.
 | Config key | `transport.mode = "udp"` | `transport.mode = "serial"` |
 
 UDP, not TCP (NFR 3.2): no handshake to re-establish, no retransmission
-stalling behind a lost packet. Loss is handled by re-sending instead.
+stalling behind a lost packet. The bridge re-sends instead.
 
 The ESP32 defaults to running its **own access point** (`WIFI_USE_AP 1`),
 so the vehicle is always at `192.168.4.1` and no venue network is involved.
-If station mode is used instead, read the IP the ESP32 prints at boot and put
-it in `python_bridge/config.json` as `transport.udp.esp32_ip`.
+In station mode, read the IP the ESP32 prints at boot and put it in
+`python_bridge/config.json` as `transport.udp.esp32_ip`.
 
 ### 1.3 Acknowledgement (COM-05)
 
@@ -68,10 +68,10 @@ e.g.  ACK:F:FORWARD
 
 Over UDP the reply goes to the sender's source address and port. Over serial
 it goes to the serial port. Unparsable input produces `ERR:unknown command`
-on serial and is silently counted over UDP.
+on serial. Over UDP the firmware counts it and says nothing.
 
-The acknowledgement is emitted **after** the motor state machine has been
-updated, so the bridge's round-trip measurement includes the motor reaction,
+The firmware sends the acknowledgement **after** it updates the motor state
+machine, so the bridge's round-trip measurement includes the motor reaction,
 not just the network hop.
 
 Acknowledgements are advisory. The bridge does not wait for them and never
@@ -100,7 +100,7 @@ matter:
 ## 2. Vehicle state machine
 
 Implemented in `firmware/neurodrive_firmware/motor_control.cpp`, and mirrored
-exactly in `tests/fake_esp32.py` so it can be tested without hardware.
+exactly in `tests/fake_esp32.py` so the tests run without hardware.
 
 ```
                      F
@@ -289,7 +289,7 @@ silently excludes it would be dishonest, and an evaluator will ask.
 ## 5. ESP32 pin assignment
 
 From Appendix C of the project plan. **M4 and M3 must both sign off before
-any wiring is soldered.** The authoritative copy is
+anyone solders a wire.** The authoritative copy is
 `firmware/neurodrive_firmware/config.h`.
 
 | ESP32 pin | Connected to | Purpose |
@@ -306,9 +306,9 @@ any wiring is soldered.** The authoritative copy is
 | GPIO 18 | Yellow LED | Turning |
 | GPIO 5 | Red LED | Stopped |
 
-**Power (NFR 3.4).** Motors are powered from the battery through the L298N
-only. They are never driven from an ESP32 pin. The ESP32 takes 5 V from a
-buck converter, and the grounds are common.
+**Power (NFR 3.4).** The battery powers the motors through the L298N. An
+ESP32 pin never does, not once, not for a quick test. The ESP32 itself takes
+5 V from a buck converter, and the grounds are common.
 
 **Emergency stop (SF-01).** GPIO 4 is the *signalling* half. The button must
 **also** physically break the motor supply. Firmware can hang; a switch in
@@ -318,9 +318,9 @@ the battery line cannot.
 
 ## 6. Configuration keys
 
-`python_bridge/config.json` is the only place thresholds and addresses are
-set (SP-07). Full documentation in `python_bridge/config.README.md`. The
-keys other modules depend on:
+`python_bridge/config.json` is the only place to set thresholds and
+addresses (SP-07). Full documentation in `python_bridge/config.README.md`.
+The keys other modules depend on:
 
 | Key | Default | Consumed by |
 |---|---|---|
@@ -335,15 +335,14 @@ keys other modules depend on:
 | `signal_processing.blink_strength_threshold` | `150` | `signal_processor` |
 | `loop.rate_hz` | `20` | must be ≥ 10 (NFR 3.2) |
 
-The three "must" relationships are checked at startup by
-`config.Config.validate()`, which refuses to run rather than producing
-strange vehicle behaviour.
+`config.Config.validate()` checks the three "must" relationships at startup
+and refuses to run rather than produce strange vehicle behaviour.
 
 ---
 
 ## 7. Verification
 
-Every claim above is covered by a test:
+A test covers every claim above:
 
 | Contract clause | Test |
 |---|---|

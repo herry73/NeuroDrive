@@ -6,13 +6,13 @@ Requirement coverage:
            and as Fallback Level 1 on demo day (plan section 11.3).
 
 Works on Windows (``msvcrt``) and POSIX (``termios`` + ``select``) with no
-third-party dependency. Keys are normalised to short names so the caller
+third-party dependency. It normalises keys to short names, so the caller
 never deals with escape sequences:
 
     "UP" "DOWN" "LEFT" "RIGHT" "SPACE" "ESC" "ENTER" and single characters.
 
-Used as a context manager so the terminal is always restored, including on
-an exception or Ctrl-C.
+Use it as a context manager. It restores the terminal on the way out,
+including after an exception or a Ctrl-C.
 """
 
 from __future__ import annotations

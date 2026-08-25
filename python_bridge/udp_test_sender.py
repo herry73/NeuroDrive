@@ -1,5 +1,5 @@
 """
-Standalone vehicle test tool -- no EEG headset required.
+Standalone vehicle test tool. No EEG headset required.
 
 This is the Week 1 integration tool (M5's deliverable): it proves the
 laptop -> ESP32 -> L298N -> motors chain works before any brain signal is
@@ -95,7 +95,7 @@ def run_ping(sender: CommandSender, attempts: int = 5) -> int:
 
 
 def run_drive(sender: CommandSender, turn_repeat_s: float = 0.3) -> None:
-    """Arrow-key driving -- the same control scheme as the bridge's override."""
+    """Arrow-key driving, the same control scheme as the bridge's override."""
     print("  Arrow keys / WASD to drive, space to stop, q to quit.\n")
     keyboard = KeyboardReader()
     if not keyboard.start():

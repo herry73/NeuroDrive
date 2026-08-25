@@ -67,7 +67,7 @@ raised:
 | Right wrist | 16 | Is the right arm up? |
 
 Scale invariant, so it works at any sensible distance and needs no
-calibration. Both arms up returns nothing on purpose: it is ambiguous, and a
+calibration. Both arms up returns nothing, on purpose. That pose is ambiguous, and a
 vehicle that guesses when the user is ambiguous is one nobody trusts.
 
 ### Why pose landmarks and not hand detection
@@ -115,8 +115,8 @@ Full list in `config.json` under `vision`. The ones worth touching:
 
 | Key | Default | Change it when |
 |---|---|---|
-| `camera_index` | `0` | A second webcam, or the laptop lid camera is picked |
-| `fps_limit` | `15` | Lower it on a slow laptop. The control loop is unaffected either way |
+| `camera_index` | `0` | A second webcam, or it grabbed the laptop lid camera |
+| `fps_limit` | `15` | Lower it on a slow laptop. It never touches the control loop |
 | `raise_margin` | `0.05` | A resting hand triggers turns: raise it |
 | `hold_frames` | `3` | A passing hand triggers turns: raise it |
 | `refractory_ms` | `1200` | One raise gives two turns: raise it |
@@ -142,7 +142,7 @@ Gestures go through the same gates as blinks, which means a raised hand
 
 * the calibration phase is still running (UI-02),
 * the EEG link is down or the signal quality is poor (EEG-05, SF-03),
-* the mapper is disarmed by the software e-stop.
+* the software e-stop has disarmed the mapper.
 
 That is deliberate. This is a brain-controlled vehicle with a camera on the
 side, not a camera-controlled vehicle. If the headset falls off mid-demo, the
@@ -175,7 +175,7 @@ that, so run it in the demo room before demo day.
 
 Project the preview window. Watching the tracked skeleton follow you and the
 label flip to `RAISED: RIGHT` at the moment the vehicle turns does the same
-job for the camera that the attention bar does for the EEG: it makes an
+job for the camera that the attention bar does for the EEG. It makes an
 invisible decision visible to the audience (plan section 12.3).
 
 Test the framing in the actual room. Backlighting from a window behind the

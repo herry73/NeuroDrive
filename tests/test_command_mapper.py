@@ -45,7 +45,7 @@ class TestAttentionPolicy(unittest.TestCase):
         self.assertIs(mapper.update(signal(0, attention=75), 0), Command.FORWARD)
 
     def test_threshold_is_inclusive(self):
-        """SP-02: 'at or above 60' -- exactly 60 must go."""
+        """SP-02: 'at or above 60'. Exactly 60 must go."""
         mapper = armed_mapper(attention_forward_threshold=60)
         self.assertIs(mapper.update(signal(0, attention=60), 0), Command.FORWARD)
 

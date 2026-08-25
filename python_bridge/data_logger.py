@@ -15,7 +15,7 @@ Two independent outputs:
 ``session_<timestamp>.csv``
     One row per main-loop cycle. This is the file M7 uses for latency and
     reliability analysis, and the file ``ReplaySource`` plays back for the
-    fallback demo -- so the column names here and in
+    fallback demo, so the column names here and in
     ``eeg_sources.ReplaySource`` must stay in step.
 """
 

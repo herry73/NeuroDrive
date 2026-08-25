@@ -165,7 +165,7 @@ void motorSetState(MotorState state) {
     case STATE_STOP:
       baseState = STATE_STOP;
       turnStartedAt = 0;
-      // An explicit STOP from the host clears a WATCHDOG reason -- otherwise
+      // An explicit STOP from the host clears a WATCHDOG reason. Otherwise
       // the red LED would keep blinking "no commands" after the link came
       // back. A latched e-stop keeps its reason: the button, not the host,
       // decides when that clears.

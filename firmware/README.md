@@ -69,7 +69,7 @@ Three rules, most expensive to break first:
    more than a GPIO can supply, and the ESP32 will not survive it (NFR 3.4).
 2. **The grounds must be common** or the L298N reads the ESP32's logic
    levels as noise, and the motors twitch at random.
-3. **Remove the ENA/ENB jumpers.** With them fitted the enable pins are tied
+3. **Remove the ENA/ENB jumpers.** With them fitted the enable pins sit
    high, PWM does nothing, and the motors only ever run at full speed.
 
 The L298N's onboard 5 V regulator can power the ESP32 at 7.4 V input, but it
@@ -77,8 +77,8 @@ gets hot and sags under motor load. Use a separate buck converter.
 
 ### Emergency stop (SF-01)
 
-GPIO 4 is the **signalling** half: the firmware latches STOP and refuses
-movement commands while the button is held.
+GPIO 4 is the **signalling** half. The firmware latches STOP and refuses
+movement commands while someone holds the button down.
 
 That is not enough on its own. The plan requires the emergency stop to
 **physically interrupt the motor supply** as well, with a switch in the
@@ -99,15 +99,15 @@ loop():
 Nothing blocks. There is no `delay()` in the command path, which is what
 keeps the packet-to-motor time under 10 ms (NFR 3.2).
 
-The order matters: safety runs first, so a tripped watchdog or a pressed
-button stops the vehicle before any newly arrived command can be acted on.
+The order matters. Safety runs first, so a tripped watchdog or a pressed
+button stops the vehicle before the firmware acts on a newly arrived command.
 
 ### The state machine
 
 `STOP`, `FORWARD`, `TURN_LEFT`, `TURN_RIGHT`. A turn is a 300 ms pulse that
 returns to whatever the vehicle was doing before (MV-03).
 
-Two rules that are easy to get wrong and are covered by the tests:
+Two rules that are easy to get wrong. The tests cover both:
 
 * **Re-sending an in-progress turn does not restart its timer.** The bridge
   re-sends every 250 ms as a keepalive; without this rule a 300 ms turn

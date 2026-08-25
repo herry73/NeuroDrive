@@ -1,7 +1,7 @@
 # NeuroDrive Python bridge dependencies.
 #
 # The bridge deliberately runs on the standard library alone in mock and
-# replay mode -- you can clone the repo and run the whole pipeline, tests
+# replay mode. You can clone the repo and run the whole pipeline, tests
 # included, with nothing installed. pyserial is needed only to talk to real
 # hardware.
 #

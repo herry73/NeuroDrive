@@ -7,7 +7,7 @@ Requirement coverage:
     COM-04  Tolerate dropped packets: the current command is re-sent
             periodically, so a lost packet self-heals within one interval.
     COM-05  Consume the firmware's acknowledgement and measure round-trip time.
-    NFR 3.2 UDP, not TCP -- no handshake, no head-of-line blocking.
+    NFR 3.2 UDP, not TCP. No handshake, no head-of-line blocking.
     NFR 3.3 Sending runs on its own thread; ``send()`` never blocks.
 
 Wire format (docs/INTERFACE_CONTRACT.md): one ASCII character plus ``\\n``.
@@ -359,8 +359,8 @@ class CommandSender:
             # Wait for the next command, but never longer than one ack poll.
             # Blocking for a whole resend interval would delay acknowledgement
             # handling by up to that interval, which would show up as phantom
-            # round-trip time in the COM-03 latency figures -- and would make
-            # shutdown sluggish.
+            # round-trip time in the COM-03 latency figures, and would slow
+            # shutdown down.
             until_resend = self.resend_interval_s - (now - self._last_send_time)
             timeout = max(0.001, min(ACK_POLL_INTERVAL_S, until_resend))
             try:
@@ -369,8 +369,8 @@ class CommandSender:
                 command = None
 
             if command is not None:
-                # Coalesce: if several changes queued up, only the newest
-                # matters -- the older ones are already obsolete.
+                # Coalesce. If several changes queued up, only the newest
+                # matters. The older ones are already obsolete.
                 while True:
                     try:
                         command = self._queue.get_nowait()

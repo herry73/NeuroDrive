@@ -3,8 +3,8 @@
 Every tunable parameter of the bridge lives in `config.json` (SP-07 / NFR
 3.5). Nothing in this list requires editing code.
 
-JSON has no comments, so any key beginning with `_` is treated as
-documentation and ignored by the loader. That is why `config.json` contains
+JSON has no comments, so the loader treats any key beginning with `_` as
+documentation and skips it. That is why `config.json` contains
 `_source`, `_mode` and similar keys.
 
 Three ways to change a value, least permanent first:
@@ -54,8 +54,8 @@ clone runs on any laptop with no hardware.
 | `loop` | `true` | Restart at the end instead of going silent |
 | `speed` | `1.0` | Playback rate. `2.0` runs twice as fast |
 
-Any `session_*.csv` written by a previous run can be replayed, which is how a
-good session becomes the fallback demo.
+Replay any `session_*.csv` a previous run wrote. That is how a good session
+becomes the fallback demo.
 
 ### `eeg.mock`: synthetic signal, no hardware
 
@@ -76,7 +76,7 @@ good session becomes the fallback demo.
 | `blink_strength_threshold` | `150` | SP-04 | Minimum blink strength that counts. Raise if ordinary blinking triggers turns |
 | `blink_debounce_ms` | `300` | SP-06 | Minimum gap between accepted blinks. Raise if one blink registers twice |
 | `double_blink_window_ms` | `500` | SP-05 | Two blinks closer than this are one *double* gesture (only used in `single_double` mode) |
-| `poor_signal_cutoff` | `25` | SF-03 | Above this, the headset's own quality metric says the signal is unusable and commands are paused. `0` = perfect contact, `200` = not on a head |
+| `poor_signal_cutoff` | `25` | SF-03 | Above this, the headset's own quality metric says the signal is unusable, and the bridge pauses commands. `0` = perfect contact, `200` = not on a head |
 
 ### `signal_processing.blink_from_raw`: fallback detector
 
@@ -120,8 +120,8 @@ Appendix B of the project plan recommends keeping the two 15-20 apart.
 |---|---|---|
 | `mode` | `udp` | `udp` (wireless, primary) or `serial` (USB cable, fallback) |
 | `resend_interval_ms` | `250` | Re-send the current command this often. Doubles as the watchdog keepalive, so it **must stay well below the firmware's 2000 ms `WATCHDOG_TIMEOUT_MS`** |
-| `queue_size` | `32` | Pending command changes before the oldest is dropped |
-| `turn_burst` | `3` | How many times a turn command is transmitted, since UDP has no retries |
+| `queue_size` | `32` | How many command changes can wait before the sender drops the oldest |
+| `turn_burst` | `3` | How many times the bridge transmits a turn, since UDP has no retries |
 
 ### `transport.udp`
 
@@ -148,7 +148,7 @@ Appendix B of the project plan recommends keeping the two 15-20 apart.
 | `ui.console_dashboard` | `true` | Live display. Turn off when piping output to a file |
 | `ui.refresh_hz` | `10` | Dashboard redraw rate. Lower it if the terminal flickers |
 | `ui.keyboard_override` | `true` | Enable the arrow-key override (UI-03) |
-| `ui.colour` | `true` | ANSI colour; ignored automatically when not a terminal |
+| `ui.colour` | `true` | ANSI colour. Skipped when the output is not a terminal |
 | `logging.dir` | `logs` | Where log and session files go. Relative to `python_bridge/` |
 | `logging.level` | `INFO` | `DEBUG` also records every acknowledgement line |
 | `logging.csv_data_log` | `true` | Write `session_*.csv` (EEG-04). Also what replay reads back |

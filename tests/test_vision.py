@@ -8,7 +8,7 @@ same split the rest of the suite uses: ``fake_esp32.py`` stands in for the
 firmware, and here a handful of coordinates stands in for a person.
 
 Requirement coverage:
-    MV-01  LEFT and RIGHT are produced.
+    MV-01  The reader produces LEFT and RIGHT.
     SP-06  One raise produces exactly one turn.
 """
 

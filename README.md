@@ -33,10 +33,10 @@ git clone <repo-url> && cd NeuroDrive
 Then, in two terminals:
 
 ```powershell
-# terminal 1 -- the vehicle
+# terminal 1: the vehicle
 python tests\fake_esp32.py
 
-# terminal 2 -- the bridge
+# terminal 2: the bridge
 cd python_bridge
 python main.py --esp32-ip 127.0.0.1 --skip-calibration
 ```
@@ -126,7 +126,8 @@ cd python_bridge
 python main.py
 ```
 
-Fifteen seconds of calibration (the vehicle cannot move), then it arms.
+Fifteen seconds of calibration, during which the vehicle cannot move. Then
+it arms.
 
 | Key | Action |
 |---|---|
@@ -161,7 +162,7 @@ Four independent layers. Each works if the others fail.
 1. **Hardware kill switch.** Physically breaks the motor supply. Not
    software. This is the one that always works.
 2. **E-stop button (GPIO 4).** The firmware latches STOP and refuses
-   movement commands until it is released.
+   movement commands until someone releases the button.
 3. **Watchdog (2 s).** If commands stop arriving, the vehicle stops on its
    own. It does not care why: bridge crashed, WiFi dropped, laptop lid shut.
 4. **Signal-loss stop.** The bridge sends STOP the moment the headset goes

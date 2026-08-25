@@ -237,7 +237,7 @@ class TestAcknowledgements(unittest.TestCase):
 
 
 class TestUdpTransport(unittest.TestCase):
-    """Real sockets on loopback -- proves the datagrams actually leave."""
+    """Real sockets on loopback. Proves the datagrams actually leave."""
 
     def setUp(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

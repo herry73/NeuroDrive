@@ -109,7 +109,8 @@ control path.
 
 ## Output files
 
-Written to `logs/` (configurable):
+The bridge writes two files per run, into `logs/` or wherever `logging.dir`
+points:
 
 | File | Contents |
 |---|---|

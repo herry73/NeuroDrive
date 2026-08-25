@@ -1,11 +1,11 @@
 /*
- * NeuroDrive firmware -- build-time configuration.
+ * NeuroDrive firmware build-time configuration.
  *
  * Everything tunable lives here (NFR 3.5). Pin numbers match Appendix C of
  * the project plan; confirm them against your ESP32 board variant before
  * wiring, and keep this file in step with docs/INTERFACE_CONTRACT.md.
  *
- * WiFi credentials do NOT live here -- copy secrets.h.example to secrets.h
+ * WiFi credentials do NOT live here. Copy secrets.h.example to secrets.h
  * and edit that. secrets.h is git-ignored so the demo hotspot password is
  * never committed.
  */
@@ -29,7 +29,7 @@
 
 // Emergency stop button: INPUT_PULLUP, pressed = LOW (SF-01).
 // This is the *signalling* path only. The button must ALSO physically break
-// the motor supply -- firmware alone is not an emergency stop.
+// the motor supply. Firmware alone is not an emergency stop.
 #define PIN_ESTOP 4
 
 // Status indicators (Should Have)

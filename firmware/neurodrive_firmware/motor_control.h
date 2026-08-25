@@ -27,7 +27,7 @@ enum MotorState {
   STATE_TURN_RIGHT
 };
 
-// Why the vehicle is in its current state -- reported over serial and used
+// Why the vehicle is in its current state. Reported over serial, and used
 // by the LED module. Ordered by severity; the highest one wins the LEDs.
 enum StopReason {
   STOP_REASON_NONE = 0,

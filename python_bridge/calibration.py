@@ -7,11 +7,11 @@ Requirement coverage:
     NFR 3.8 The whole startup procedure completes in under 60 seconds.
 
 What it actually does: holds the mapper disarmed, watches the incoming
-attention values, and reports what it saw. The measured baseline is turned
-into *suggested* thresholds using the guidance in Appendix B of the project
-plan (keep the stop threshold 15-20 below the forward threshold). The
-suggestion is only applied when the operator asks for it -- silently
-retuning the vehicle between runs would make demo behaviour unreproducible.
+attention values, and reports what it saw. It turns the measured baseline
+into *suggested* thresholds using the guidance in Appendix B of the project plan,
+which is to keep the stop threshold 15-20 below the forward threshold. The
+suggestion applies only when the operator asks for it. Retuning the vehicle
+between runs without saying so would make demo behaviour unreproducible.
 """
 
 from __future__ import annotations
@@ -136,8 +136,8 @@ class Calibrator:
 
         if result.quality_ratio < 0.5 and self._samples:
             result.warnings.append(
-                "signal quality was poor for most of the calibration -- "
-                "re-seat the forehead sensor and the ear clip"
+                "signal quality was poor for most of the calibration. "
+                "Re-seat the forehead sensor and the ear clip"
             )
 
         if not self._values:
@@ -159,8 +159,8 @@ class Calibrator:
 
         if result.stdev is not None and result.stdev < 2.0:
             result.warnings.append(
-                "attention barely varied -- the headset may not be reading "
-                "the user (check the ear clip)"
+                "attention barely varied. The headset may not be reading "
+                "the user, so check the ear clip"
             )
         if result.maximum is not None and result.maximum < FORWARD_MIN:
             result.warnings.append(
@@ -183,9 +183,9 @@ class Calibrator:
 def apply_result(config, result: CalibrationResult) -> bool:
     """Write the suggested thresholds into the in-memory configuration.
 
-    Returns True if anything changed. The on-disk ``config.json`` is left
-    alone -- persisting a threshold is a deliberate act by M2, not a side
-    effect of starting the bridge.
+    Returns True if anything changed. This never touches the on-disk
+    ``config.json``. Persisting a threshold is a deliberate act by M2, not a
+    side effect of starting the bridge.
     """
     if result.suggested_forward is None or result.suggested_stop is None:
         return False

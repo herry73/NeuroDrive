@@ -3,7 +3,7 @@
 Owner: **M7** (QA / Testing & Integration Lead).
 
 Everything here runs on a bare laptop. No headset, no ESP32, no motors. That
-is deliberate: the plan's critical path runs through hardware, so the test
+is deliberate. The plan's critical path runs through hardware, so the test
 suite must not.
 
 ---
@@ -18,7 +18,7 @@ python -m unittest discover -s tests     # if pytest is unavailable
 ```
 
 Run from the repository root. `_bootstrap.py` puts `python_bridge/` on the
-path, so no installation step is needed.
+path, so there is nothing to install.
 
 ---
 
@@ -112,8 +112,8 @@ figure belongs to the hardware and not to our code. Report that leg
 separately; a single number that quietly excludes it will not survive a
 question from an evaluator.
 
-Against the simulator, the round-trip figure is dominated by the host OS
-socket-timer granularity (~16 ms on Windows). Use real hardware for any
+Against the simulator, the host OS socket-timer granularity (~16 ms on
+Windows) swamps the round-trip figure. Use real hardware for any
 number that goes in the report.
 
 ---
@@ -135,8 +135,8 @@ Section 10.1 of the project plan, and where each item is verified.
 | 9 | Stable for 5 minutes | `python main.py --duration 300` + `--target` benchmark |
 | 10 | Thresholds tunable without code changes | `test_config` |
 
-Items 4 and 7 cannot be automated. They are physical. Everything else is
-covered, and rerunning the suite after any change is the regression test.
+Items 4 and 7 cannot be automated. They are physical. The suite covers
+everything else, and rerunning it after any change is the regression test.
 
 ### The 5-minute stability run (item 9)
 
@@ -159,8 +159,8 @@ vehicle before signing off.
 * Put the requirement ID in the docstring (`SP-03`, `SF-02`). The traceability
   is what makes the test report credible.
 * Pass time in explicitly rather than sleeping. `SignalProcessor` and
-  `CommandMapper` both take `now` as a parameter precisely so timing
-  behaviour can be tested instantly and deterministically.
+  `CommandMapper` both take `now` as a parameter so a test can drive the
+  clock directly instead of waiting on one.
 * Use `wait_until(...)` from `test_integration.py` for anything genuinely
   concurrent. Never a bare `sleep` followed by an assertion.
 * Test the failure path too. Half of these tests check that the vehicle
