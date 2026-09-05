@@ -396,24 +396,6 @@ it has been paired with.
 
 ---
 
-## Demo fallbacks
-
-Ordered by preference:
-
-1. **Keyboard override.** Press `k`. The dashboard still shows live EEG
-   values, so the headset is visibly working even if it is not steering.
-2. **Recorded session replay.** Every run writes `logs/session_*.csv`, and
-   `logs/demo_session.csv` is committed and replays out of the box:
-   `python main.py --source replay`. It looks identical to a live drive. Say
-   so if asked.
-3. **Synthetic source.** `python main.py --source mock` needs no headset at
-   all.
-4. **Serial cable.** Set `transport.mode` to `serial` if WiFi misbehaves.
-5. **Vehicle on blocks.** Wheels spin freely, and the system is still
-   visibly working.
-
----
-
 ## Documentation
 
 | Document | What it covers |
