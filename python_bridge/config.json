@@ -5,14 +5,14 @@
     "_source": "serial = real MindWave over Bluetooth SPP | mock = synthetic signal, no hardware | replay = play back a recorded CSV",
     "source": "mock",
     "serial": {
-      "port": "COM5",
+      "port": "COM4",
       "baudrate": 57600,
       "read_timeout_s": 0.2,
       "reconnect_attempts": 3,
       "reconnect_delay_s": 2.0
     },
     "replay": {
-      "csv_path": "logs/recorded_session.csv",
+      "csv_path": "logs/demo_session.csv",
       "loop": true,
       "speed": 1.0
     },
@@ -66,6 +66,8 @@
     "attention_stop_hold_ms": 1000,
     "_turn_source": "blink = turn on eye blinks (default) | vision = turn on raised hands | both",
     "turn_source": "blink",
+    "_hold_turn_while_raised": "true = the vehicle keeps turning for as long as the hand stays up, and straightens when it comes down. false = one raise gives one turn pulse of turn_command_repeat_ms.",
+    "hold_turn_while_raised": true,
     "_blink_mode": "alternate = each blink turns the other way | single_double = one blink LEFT, two blinks RIGHT",
     "blink_mode": "alternate",
     "first_turn_direction": "LEFT",
@@ -87,6 +89,8 @@
       "port": "COM6",
       "baudrate": 115200
     },
+    "_invert_turns": "Set true when the vehicle turns the opposite way to the command, e.g. pressing 'a' steers it right. Applied to the outgoing byte only, so it corrects blink, webcam and keyboard turns together.",
+    "invert_turns": true,
     "resend_interval_ms": 250,
     "queue_size": 32
   },

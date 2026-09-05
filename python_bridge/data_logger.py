@@ -1,22 +1,14 @@
 """
-Logging and session recording.
+Writes the log file and the session CSV.
 
-Requirement coverage:
-    EEG-04  Every EEG value is logged with a timestamp for debugging.
-    NFR 3.5 Log destinations come from ``config.json``.
+neurodrive.log
+    Normal Python logging. Always written to file, only echoed to the
+    console when logging.console_log is on, because the dashboard owns the
+    terminal.
 
-Two independent outputs:
-
-``neurodrive.log``
-    Standard Python logging (events, warnings, connection changes). Written
-    to file always; echoed to the console only when
-    ``logging.console_log`` is set, because the dashboard owns the terminal.
-
-``session_<timestamp>.csv``
-    One row per main-loop cycle. This is the file M7 uses for latency and
-    reliability analysis, and the file ``ReplaySource`` plays back for the
-    fallback demo, so the column names here and in
-    ``eeg_sources.ReplaySource`` must stay in step.
+session_<timestamp>.csv
+    One row per loop cycle. ReplaySource reads these back, so the column
+    names here and in eeg_sources.ReplaySource have to match.
 """
 
 from __future__ import annotations

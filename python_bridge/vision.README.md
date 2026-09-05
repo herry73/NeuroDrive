@@ -4,38 +4,30 @@ Raise your right hand, the vehicle turns right. Raise your left, it turns
 left. Attention still drives forward and stop, so this replaces the blink
 gesture rather than the EEG.
 
-Owner: **M8** (CV research), with **M5** for the bridge integration.
-
 ---
 
 ## Setup
 
-Two packages and one model file, on the demo laptop only:
+Two packages, on the laptop that will run the camera:
 
-```powershell
+```
 pip install mediapipe opencv-python
 ```
 
-```powershell
-cd python_bridge
-mkdir models
-curl -o models/pose_landmarker_lite.task `
-  https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
-```
-
-The model is 5.8 MB and is the only thing here that needs the internet.
-Download it before demo day, because the venue laptop will be joined to the
-ESP32's own network with no route out.
+That is the whole setup. The pose model is committed to the repository at
+`python_bridge/models/pose_landmarker_lite.task` (5.8 MB), so a fresh clone
+already has it and nothing needs downloading — which matters on demo day,
+when the laptop is joined to the ESP32's own network with no route out.
 
 Nothing else in the bridge depends on any of this. `vision.py` imports
-mediapipe lazily inside its own thread, so a machine without it runs the
-whole test suite and drives on blinks exactly as before.
+mediapipe lazily inside its own thread, so a machine without it still runs
+the bridge and drives on blinks exactly as before.
 
 ---
 
 ## Running it
 
-```powershell
+```
 python vision_test.py                    # camera only, no headset, no vehicle
 python main.py --vision                  # hands turn, attention drives
 python main.py --vision-preview          # same, plus the camera window
@@ -46,7 +38,7 @@ Tune it with `vision_test.py` first. It shows a preview window with the
 tracked shoulders and wrists drawn on, prints one line per accepted gesture,
 and needs neither the headset nor the vehicle:
 
-```powershell
+```
 python vision_test.py --hold-frames 5        # demand a steadier raise
 python vision_test.py --refractory-ms 2000   # slower repeat
 python vision_test.py --raise-margin 0.10    # hand must go higher
@@ -67,8 +59,9 @@ raised:
 | Right wrist | 16 | Is the right arm up? |
 
 Scale invariant, so it works at any sensible distance and needs no
-calibration. Both arms up returns nothing, on purpose. That pose is ambiguous, and a
-vehicle that guesses when the user is ambiguous is one nobody trusts.
+calibration. Both arms up returns nothing, on purpose. That pose is
+ambiguous, and a vehicle that guesses when the user is ambiguous is one
+nobody trusts.
 
 ### Why pose landmarks and not hand detection
 
@@ -102,32 +95,51 @@ hand to the other still counts, so left, right, left works without lowering
 both arms in between.
 
 **`refractory_ms`** (default 1200). A quiet period after each accepted
-gesture, mirroring the blink debounce in `signal_processor` (SP-06).
+gesture, mirroring the blink debounce in `signal_processor`.
 
-Set `repeat_while_held_ms` above 0 if you would rather a held arm keep
-turning. It is off by default.
+---
+
+## How long the vehicle keeps turning
+
+That is `control.hold_turn_while_raised`, which is `true` by default.
+
+**`true`** — the turn persists. The mapper refreshes the turn deadline on
+every control cycle the hand is still up, and clears it the moment the hand
+comes down, so the vehicle turns for exactly as long as you hold the raise
+and straightens when you lower it.
+
+**`false`** — one raise gives one pulse of `control.turn_command_repeat_ms`
+(500 ms), and the vehicle straightens even if the arm is still up.
+
+`control.turn_command_repeat_ms` still matters in the `true` case, but as a
+grace window rather than a turn length: it has to outlast the gap between
+camera frames. The camera runs at 15 fps and the control loop at 20 Hz, so
+the 500 ms default has plenty of margin, and dropping it below roughly
+200 ms will make a held turn stutter.
+
+`vision.repeat_while_held_ms` is a separate, lower-level knob on the detector
+itself: at `0` (the default) a held arm emits one gesture event, and above
+`0` it re-emits one that often. Leave it at `0` and use
+`hold_turn_while_raised` for held turns.
 
 ---
 
 ## Configuration
 
-Full list in `config.json` under `vision`. The ones worth touching:
+Full list in [`config.README.md`](config.README.md). The ones worth
+touching:
 
 | Key | Default | Change it when |
 |---|---|---|
-| `camera_index` | `0` | A second webcam, or it grabbed the laptop lid camera |
-| `fps_limit` | `15` | Lower it on a slow laptop. It never touches the control loop |
-| `raise_margin` | `0.05` | A resting hand triggers turns: raise it |
-| `hold_frames` | `3` | A passing hand triggers turns: raise it |
-| `refractory_ms` | `1200` | One raise gives two turns: raise it |
-| `min_visibility` | `0.6` | The user is partly out of frame and it is guessing |
-| `preview` | `false` | You want the camera window during the demo |
-
-And in `control`:
-
-| Key | Default | Meaning |
-|---|---|---|
-| `turn_source` | `blink` | `blink`, `vision`, or `both` |
+| `vision.camera_index` | `0` | A second webcam, or it grabbed the wrong one |
+| `vision.fps_limit` | `15` | Lower it on a slow laptop. It never touches the control loop |
+| `vision.raise_margin` | `0.05` | A resting hand triggers turns: raise it |
+| `vision.hold_frames` | `3` | A passing hand triggers turns: raise it |
+| `vision.refractory_ms` | `1200` | One raise gives two turns: raise it |
+| `vision.min_visibility` | `0.6` | The user is partly out of frame and it is guessing |
+| `vision.preview` | `false` | You want the camera window during the demo |
+| `control.turn_source` | `blink` | `blink`, `vision`, or `both` |
+| `control.hold_turn_while_raised` | `true` | `false` for one pulse per raise |
 
 `config.Config.validate()` refuses to start if `turn_source` wants the camera
 while `vision.enabled` is false, rather than leaving you wondering why
@@ -140,34 +152,31 @@ raising a hand does nothing.
 Gestures go through the same gates as blinks, which means a raised hand
 **cannot** move the vehicle when:
 
-* the calibration phase is still running (UI-02),
-* the EEG link is down or the signal quality is poor (EEG-05, SF-03),
+* the calibration phase is still running,
+* the EEG link is down or the signal quality is poor,
 * the software e-stop has disarmed the mapper.
 
 That is deliberate. This is a brain-controlled vehicle with a camera on the
 side, not a camera-controlled vehicle. If the headset falls off mid-demo, the
 car stops, and waving at it will not restart it.
 
-Turns are the same 300 ms pulse as ever (MV-03), so the firmware's state
-machine and watchdog behave identically no matter which input produced the
-command. Nothing in `docs/INTERFACE_CONTRACT.md` changes.
+The command that reaches the firmware is the same `L` or `R` a blink
+produces, so the state machine and the watchdog behave identically no matter
+which input generated it.
 
 ---
 
-## Testing
+## Checking it works
 
-```powershell
-python -m pytest tests/test_vision.py -q
+```
+python vision_test.py
 ```
 
-24 tests, no camera, no model, no mediapipe import, about 40 ms. The
-classification and debounce logic are pure functions taking `now` as a
-parameter, so a handful of coordinates stands in for a person the same way
-`fake_esp32.py` stands in for the firmware.
-
-What the tests do not cover is whether the camera can see a real human in
-your actual room. Nothing but `vision_test.py` and a person will tell you
-that, so run it in the demo room before demo day.
+The classification and debounce logic are pure functions that take `now` as
+a parameter, so they behave the same every run. What no amount of that will
+tell you is whether the camera can see a real human in your actual room.
+Only `vision_test.py` and a person standing in front of it will, so run it
+where you plan to demo.
 
 ---
 
@@ -176,7 +185,7 @@ that, so run it in the demo room before demo day.
 Project the preview window. Watching the tracked skeleton follow you and the
 label flip to `RAISED: RIGHT` at the moment the vehicle turns does the same
 job for the camera that the attention bar does for the EEG. It makes an
-invisible decision visible to the audience (plan section 12.3).
+invisible decision visible to the audience.
 
 Test the framing in the actual room. Backlighting from a window behind the
 user is the usual failure, and `vision_test.py` reports what percentage of

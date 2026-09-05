@@ -1,17 +1,10 @@
 """
 Startup calibration.
 
-Requirement coverage:
-    UI-02   A calibration phase (default 15 s) during which the vehicle does
-            not move.
-    NFR 3.8 The whole startup procedure completes in under 60 seconds.
-
-What it actually does: holds the mapper disarmed, watches the incoming
-attention values, and reports what it saw. It turns the measured baseline
-into *suggested* thresholds using the guidance in Appendix B of the project plan,
-which is to keep the stop threshold 15-20 below the forward threshold. The
-suggestion applies only when the operator asks for it. Retuning the vehicle
-between runs without saying so would make demo behaviour unreproducible.
+Holds the mapper disarmed, watches the attention values coming in, and
+reports what it saw. It suggests thresholds from the measured baseline,
+keeping the stop threshold 15-20 below the forward one. The suggestion is
+only applied if the operator asks for it, so runs stay reproducible.
 """
 
 from __future__ import annotations

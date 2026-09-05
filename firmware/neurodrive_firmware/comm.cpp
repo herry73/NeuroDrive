@@ -113,7 +113,7 @@ static bool applyCommand(char command, unsigned long now, bool overUdp) {
       return false;
   }
 
-  // SF-02: any valid command, including PING, keeps the watchdog happy.
+  // any valid command, including PING, keeps the watchdog happy.
   safetyFeedWatchdog(now);
   packetsReceived++;
   lastPacketMs = now;
@@ -265,7 +265,7 @@ static int pollSerial(unsigned long now) {
     if (serialLineLength < sizeof(serialLine) - 1) {
       serialLine[serialLineLength++] = character;
     } else {
-      // Overlong line: drop it rather than overflow the buffer (NFR 3.1).
+      // Overlong line: drop it rather than overflow the buffer.
       serialLineLength = 0;
       packetsRejected++;
     }

@@ -1,9 +1,8 @@
 /*
  * NeuroDrive firmware build-time configuration.
  *
- * Everything tunable lives here (NFR 3.5). Pin numbers match Appendix C of
- * the project plan; confirm them against your ESP32 board variant before
- * wiring, and keep this file in step with docs/INTERFACE_CONTRACT.md.
+ * Everything tunable lives here. Check the pin numbers against your own
+ * ESP32 board variant before wiring.
  *
  * WiFi credentials do NOT live here. Copy secrets.h.example to secrets.h
  * and edit that. secrets.h is git-ignored so the demo hotspot password is
@@ -14,7 +13,7 @@
 #define NEURODRIVE_CONFIG_H
 
 // ---------------------------------------------------------------------------
-// Pin assignment (project plan, Appendix C)
+// Pin assignment
 // ---------------------------------------------------------------------------
 
 // L298N direction inputs
@@ -27,12 +26,12 @@
 #define PIN_LEFT_ENA 32
 #define PIN_RIGHT_ENB 33
 
-// Emergency stop button: INPUT_PULLUP, pressed = LOW (SF-01).
+// Emergency stop button: INPUT_PULLUP, pressed = LOW.
 // This is the *signalling* path only. The button must ALSO physically break
 // the motor supply. Firmware alone is not an emergency stop.
 #define PIN_ESTOP 4
 
-// Status indicators (Should Have)
+// Status indicators
 #define PIN_LED_BUILTIN 2   // heartbeat / link status
 #define PIN_LED_GREEN 19    // forward
 #define PIN_LED_YELLOW 18   // turning
@@ -46,19 +45,19 @@
 #define PWM_RESOLUTION_BITS 8
 #define PWM_MAX_DUTY ((1 << PWM_RESOLUTION_BITS) - 1)  // 255
 
-// MV-05: fixed safe demo speed, as a percentage of full scale.
+// Fixed safe speed, as a percentage of full scale.
 #define SPEED_FORWARD_PCT 50
 #define SPEED_TURN_PCT 55  // pivot turns need slightly more torque to break static friction
 
-// M6's straight-line trim. Two "identical" motors never match; scale each
-// side by these percentages until the vehicle tracks straight.
+// Straight-line trim. Two "identical" motors never match, so scale each
+// side until the vehicle drives straight.
 #define TRIM_LEFT_PCT 100
 #define TRIM_RIGHT_PCT 100
 
 // Motors below roughly 30% duty usually stall and buzz instead of turning.
 #define MIN_MOVE_DUTY 60
 
-// Turning strategy (M6's call after test runs).
+// Turning strategy.
 //   1 = pivot turn: wheels counter-rotate. Tightest turn, works anywhere.
 //   0 = differential turn: inside wheel stops, the vehicle arcs forward.
 #define TURN_STYLE_PIVOT 1
@@ -67,10 +66,10 @@
 // Timing
 // ---------------------------------------------------------------------------
 
-// MV-03: a turn is a timed pulse, then the previous state resumes.
+// a turn is a timed pulse, then the previous state resumes.
 #define TURN_PULSE_MS 300
 
-// SF-02: stop if no valid command arrives within this window.
+// stop if no valid command arrives within this window.
 #define WATCHDOG_TIMEOUT_MS 2000
 
 // Button debounce (mechanical contacts bounce for a few milliseconds).
@@ -89,27 +88,25 @@
 // Networking
 // ---------------------------------------------------------------------------
 
-// COM-02 / Appendix A: UDP command port.
+// UDP command port.
 #define UDP_COMMAND_PORT 4210
 
 // Where acknowledgements go. 0 = reply to the sender's own source port,
 // which is what the Python bridge expects.
 #define UDP_ACK_PORT 0
 
-// Set to 1 to run the ESP32 as its own access point. This is the most
-// reliable demo option: no venue WiFi, no DHCP surprises, and the vehicle
-// always has the same address (192.168.4.1).
+// Set to 1 to run the ESP32 as its own access point. Most reliable
+// option: no venue WiFi, no DHCP surprises, and the vehicle is always at
+// 192.168.4.1.
 //
-// Not named WIFI_MODE_AP: that is already an enumerator of the ESP-IDF
-// wifi_mode_t, and WiFiType.h defines WIFI_AP as an alias for it. A macro
-// of that name expands inside WiFi.mode(WIFI_AP) and breaks the build.
+// Do not rename this to WIFI_MODE_AP or WIFI_AP. Both names already exist
+// in the ESP-IDF headers, and a macro using them breaks the build.
 #define WIFI_USE_AP 1
 
-// 2.4 GHz channel the access point broadcasts on. The Arduino default is 1,
-// which is the busiest channel in most buildings; on a campus the ESP32's
-// trace antenna loses to the dozens of stronger APs sharing it and the SSID
-// never appears in the laptop's scan list. 1, 6 and 11 are the only three
-// that do not overlap, so pick whichever of those is quietest at the venue.
+// 2.4 GHz channel for the access point. The default of 1 is the busiest
+// channel in most buildings, and the ESP32's small antenna loses to the
+// stronger APs there, so the network never shows up in the laptop's list.
+// Use 1, 6 or 11 (the non-overlapping ones), whichever is quietest.
 #define WIFI_AP_CHANNEL 6
 
 // Station-mode static IP. Leave WIFI_USE_STATIC_IP at 0 for DHCP; if you
@@ -133,7 +130,7 @@
 #define CMD_CHAR_STOP 'S'
 #define CMD_CHAR_PING 'P'  // watchdog keepalive; does not change the state
 
-// COM-05: acknowledge each accepted command.
+// acknowledge each accepted command.
 #define SEND_ACK 1
 
 #define UDP_RX_BUFFER 64

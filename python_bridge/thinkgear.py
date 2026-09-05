@@ -1,26 +1,16 @@
 """
-ThinkGear Serial Protocol (TGSP) parser.
+Parser for the ThinkGear protocol the MindWave headset speaks.
 
-Implements the byte-level packet framing used by the NeuroSky MindWave
-Mobile 2 headset when it is exposed as a Bluetooth Classic serial port.
+Packet layout:
 
-Requirement coverage: EEG-02 (parse attention / blink strength / raw wave).
+    [0xAA] [0xAA] [length] [payload bytes] [checksum]
 
-Packet framing
---------------
-    [SYNC=0xAA] [SYNC=0xAA] [PLENGTH] [PAYLOAD * PLENGTH] [CHKSUM]
+    checksum = (~(sum(payload) & 0xFF)) & 0xFF
 
-    CHKSUM = (~(sum(PAYLOAD) & 0xFF)) & 0xFF
+Each payload row is a code followed by its value. Codes under 0x80 carry one
+value byte; codes 0x80 and up have a length byte first.
 
-Payload rows
-------------
-Each row is ``[EXCODE...] [CODE] ([VLENGTH]) [VALUE...]``. Codes below
-0x80 carry exactly one value byte; codes >= 0x80 are preceded by an
-explicit length byte.
-
-This module deliberately does no I/O. You feed it bytes, it yields decoded
-rows, and ``tests/test_thinkgear.py`` exercises the whole thing without a
-headset.
+No I/O here. Feed it bytes, get decoded rows back.
 """
 
 from __future__ import annotations
@@ -105,7 +95,7 @@ class ParserStats:
 
 
 class ThinkGearParser:
-    """Incremental, resynchronising parser for the ThinkGear byte stream.
+    """Parses the ThinkGear byte stream, resyncing after bad data.
 
     Usage::
 
@@ -113,8 +103,8 @@ class ThinkGearParser:
         for row in parser.feed(chunk_of_bytes):
             ...
 
-    ``feed`` may be called with arbitrary chunk boundaries: partial packets
-    are buffered until the remaining bytes arrive.
+    Chunks can break anywhere; a half-received packet is held until the rest
+    arrives.
     """
 
     # Internal states of the framing machine.
@@ -253,15 +243,15 @@ class ThinkGearParser:
         return raw_value
 
 
-# --- Packet construction (used by the mock generator and the tests) --------
+# --- Packet construction ---------------------------------------------------
 
 
 def build_packet(rows: List[tuple]) -> bytes:
     """Build a valid ThinkGear packet from ``(code, value)`` pairs.
 
     ``value`` is an ``int`` for single-byte codes and a ``bytes`` object for
-    multi-byte codes. Used by ``tests/mock_eeg_generator.py`` so the mock and
-    replay sources exercise the *real* parser rather than bypassing it.
+    multi-byte codes. This is what lets the mock and replay sources feed the
+    real parser instead of bypassing it.
     """
     payload = bytearray()
     for code, value in rows:

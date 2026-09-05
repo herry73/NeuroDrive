@@ -1,33 +1,19 @@
 """
-Webcam gesture input: which hand is the user holding up?
+Webcam input: which hand is the user holding up?
 
-Requirement coverage:
-    CV-01  The laptop acquires and processes a camera feed.
-    MV-01  Produces the LEFT and RIGHT movement commands.
-    SP-06  Debounces gestures, so one raise means one turn.
-    NFR 3.3  All camera work happens off the control loop's thread.
+Uses MediaPipe's pose model rather than hand detection, because the question
+is not "where is a hand" but "which of this person's hands is up", and that
+needs the shoulders as a reference. Pose landmarks are labelled by anatomy,
+so index 15 is always the subject's own left wrist, whichever side of the
+frame it shows up on. That avoids the mirror trap: a webcam shows a mirrored
+image, so "hand on the left of the frame means left" turns the wrong way
+every time.
 
-Why pose landmarks rather than hand detection
----------------------------------------------
-The question is not "where is a hand" but "which of *this person's* hands is
-up", and that needs the shoulders as a reference. MediaPipe's pose model
-labels landmarks anatomically: index 15 is the subject's own left wrist,
-whichever side of the frame it appears on. That sidesteps the mirror trap. A webcam
-pointed at a user shows a mirrored image, so a naive "hand on the left of
-the frame means left" rule turns the vehicle the wrong way every single
-time, and it does so consistently enough to look correct until someone
-checks.
+The test itself is one comparison per arm: a wrist above its own shoulder
+means that arm is raised. Works at any distance, needs no calibration.
 
-The decision itself is one comparison per arm. A wrist above its own
-shoulder means that arm is raised. It is scale invariant, needs no
-calibration, and works at any sensible distance from the camera.
-
-Structure
----------
-The classification and debounce logic are pure functions of their inputs and
-take ``now`` as a parameter, so ``tests/test_vision.py`` exercises the whole
-decision path with no camera and no model. Only :class:`VisionReader` touches
-hardware.
+Only VisionReader touches the camera. The classification and debounce logic
+are plain functions that take the time as an argument.
 """
 
 from __future__ import annotations
@@ -106,15 +92,14 @@ def classify_raise(
     raise_margin: float = 0.05,
     min_visibility: float = 0.6,
 ) -> Optional[Gesture]:
-    """Return which hand is raised, or ``None``.
+    """Return which hand is raised, or None.
 
-    Image coordinates run downward, so a raised wrist has a *smaller* y than
-    its shoulder. ``raise_margin`` is expressed as a fraction of the frame
-    height and stops a wrist hovering level with the shoulder from flickering
-    between raised and not.
+    Image coordinates run downward, so a raised wrist has a smaller y than
+    its shoulder. raise_margin is a fraction of the frame height, and stops a
+    wrist level with the shoulder from flickering between raised and not.
 
-    Both arms up returns ``None`` on purpose. It is ambiguous, and a vehicle
-    that guesses when the user is ambiguous is a vehicle nobody trusts.
+    Both arms up returns None on purpose: it is ambiguous, and the vehicle
+    should not guess.
     """
     if landmarks is None or len(landmarks) <= RIGHT_WRIST:
         return None
@@ -143,27 +128,25 @@ def classify_raise(
 
 
 class GestureDebouncer:
-    """Turns a per-frame raise signal into discrete, deliberate events.
+    """Turns a per-frame raise signal into single, deliberate events.
 
-    Three rules, each earning its place:
+    Three rules:
 
-    ``hold_frames``
-        A raise must persist across this many consecutive frames before it
-        counts. Rejects a hand passing through the frame on its way somewhere
-        else, and rejects single-frame model glitches.
+    hold_frames
+        A raise has to last this many frames in a row before it counts. Stops
+        a hand passing through the frame, and stops one-frame glitches.
 
     Edge triggering
-        One raise produces exactly one turn. The hand must come back down
-        before the same gesture fires again. Without this, holding an arm up
-        would stream turn commands at the frame rate and spin the vehicle.
+        One raise, one turn. The hand has to come back down before the same
+        gesture fires again, otherwise holding an arm up would spin the
+        vehicle.
 
-    ``refractory_ms``
-        A quiet period after each accepted event, mirroring the blink
-        debounce in ``signal_processor`` (SP-06), so a wobbling arm near the
-        threshold cannot double-fire.
+    refractory_ms
+        A quiet period after each event, so a wobbling arm near the threshold
+        cannot fire twice.
 
-    ``now`` is always passed in rather than read from the clock, so the tests
-    can drive timing behaviour instantly and deterministically.
+    The time is passed in rather than read from the clock, which keeps the
+    behaviour easy to test.
     """
 
     def __init__(
@@ -239,7 +222,7 @@ class GestureDebouncer:
 
 
 class VisionReader:
-    """Runs the camera and the pose model on their own thread (NFR 3.3).
+    """Runs the camera and the pose model on their own thread.
 
     The control loop never blocks on a frame grab or on inference. It calls
     :meth:`read_all`, which drains whatever events have accumulated and
@@ -310,6 +293,18 @@ class VisionReader:
             events = list(self._events)
             self._events.clear()
         return events
+
+    @property
+    def held(self) -> Optional[Gesture]:
+        """Which hand is raised *right now*, or None.
+
+        ``read_all`` reports the moment a raise was accepted; this reports the
+        ongoing state, so the mapper can keep turning for as long as the arm
+        stays up rather than firing one pulse per raise.
+        """
+        with self._lock:
+            raised = self._info.raised
+        return Gesture(raised) if raised else None
 
     @property
     def info(self) -> VisionInfo:
@@ -457,7 +452,7 @@ class VisionReader:
         return cv2, landmarker, mp
 
     def _draw_preview(self, cv2, frame, landmarks, gesture) -> None:
-        """Operator view. Worth projecting during the demo (plan 12.3)."""
+        """Operator view. Worth projecting during the demo."""
         height, width = frame.shape[:2]
         colour = (60, 220, 60) if landmarks is not None else (60, 60, 220)
 
