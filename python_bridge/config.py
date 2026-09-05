@@ -1,13 +1,12 @@
 """
-Configuration loading for the NeuroDrive bridge.
+Loads config.json.
 
-Requirement coverage: SP-07 / NFR 3.5. Every tunable parameter lives in a
-single ``config.json``, changeable without touching code.
+Every tunable value lives in that one file, so nothing here needs code
+changes. The loader merges the file over a full set of defaults, so a
+partial or missing config.json still gives you something complete and valid.
+Values can also be overridden on the command line:
 
-The loader merges the on-disk file over a full set of built-in defaults, so a
-partial (or missing) ``config.json`` still yields a complete, valid
-configuration. Values may also be overridden from the command line via
-``--set control.attention_forward_threshold=65``.
+    --set control.attention_forward_threshold=65
 """
 
 from __future__ import annotations
@@ -24,14 +23,14 @@ DEFAULTS: Dict[str, Any] = {
     "eeg": {
         "source": "mock",
         "serial": {
-            "port": "COM5",
+            "port": "COM4",
             "baudrate": 57600,
             "read_timeout_s": 0.2,
             "reconnect_attempts": 3,
             "reconnect_delay_s": 2.0,
         },
         "replay": {
-            "csv_path": "logs/recorded_session.csv",
+            "csv_path": "logs/demo_session.csv",
             "loop": True,
             "speed": 1.0,
         },
@@ -75,9 +74,10 @@ DEFAULTS: Dict[str, Any] = {
         "attention_stop_threshold": 40,
         "attention_stop_hold_ms": 1000,
         "turn_source": "blink",
+        "hold_turn_while_raised": True,
         "blink_mode": "alternate",
         "first_turn_direction": "LEFT",
-        "turn_command_repeat_ms": 150,
+        "turn_command_repeat_ms": 500,
         "calibration_seconds": 15,
         "require_good_signal": True,
     },
@@ -93,6 +93,7 @@ DEFAULTS: Dict[str, Any] = {
             "port": "COM6",
             "baudrate": 115200,
         },
+        "invert_turns": True,
         "resend_interval_ms": 250,
         "queue_size": 32,
     },
@@ -233,8 +234,7 @@ class Config:
             if stop >= forward:
                 problems.append(
                     "control.attention_stop_threshold must be below "
-                    "control.attention_forward_threshold (hysteresis; see "
-                    "Appendix B of the project plan)"
+                    "control.attention_forward_threshold (hysteresis)"
                 )
 
         window = self.get("signal_processing.attention_window")
@@ -261,7 +261,7 @@ class Config:
 
         rate = self.get("loop.rate_hz")
         if not isinstance(rate, (int, float)) or rate < 10:
-            # NFR 3.2: the parsing loop must run at at least 10 Hz.
+            # the parsing loop must run at at least 10 Hz.
             problems.append("loop.rate_hz must be >= 10 (non-functional requirement)")
 
         return problems

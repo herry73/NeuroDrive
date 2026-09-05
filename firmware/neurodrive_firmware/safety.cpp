@@ -3,7 +3,7 @@
 #include "config.h"
 #include "motor_control.h"
 
-// --- Emergency stop (SF-01) -------------------------------------------------
+// --- Emergency stop -------------------------------------------------
 
 static bool estopActive = false;         // debounced, latched state
 static int estopLastRawReading = HIGH;   // INPUT_PULLUP: HIGH = released
@@ -11,7 +11,7 @@ static unsigned long estopLastChangeMs = 0;
 static unsigned long estopReleasedAtMs = 0;
 static unsigned long estopPressCount = 0;
 
-// --- Watchdog (SF-02) -------------------------------------------------------
+// --- Watchdog -------------------------------------------------------
 
 static unsigned long lastCommandMs = 0;
 static bool watchdogTripped = false;
@@ -24,11 +24,11 @@ void safetySetup() {
   estopLastChangeMs = millis();
   estopReleasedAtMs = millis();
 
-  // Start already tripped: the vehicle must not move until the bridge has
-  // actually said something. Booting into "waiting for a command" is safer
-  // than booting into a 2-second grace period. Backdating the timestamp
-  // relies on unsigned wraparound, which is exactly how the comparison in
-  // tickWatchdog() is written, so this is well-defined even at millis()==0.
+  // Start already tripped, so the vehicle cannot move until the bridge
+  // has said something. Booting into "waiting for a command" is safer than
+  // booting into a 2-second grace period. Backdating the timestamp relies on
+  // unsigned wraparound, which is how tickWatchdog() compares, so it is
+  // well-defined even at millis() == 0.
   lastCommandMs = millis() - WATCHDOG_TIMEOUT_MS;
   watchdogTripped = true;  // pre-set, so the boot state is not counted as a trip
 

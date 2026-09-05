@@ -1,20 +1,11 @@
 """
-NeuroDrive bridge application entry point.
+Entry point for the bridge.
 
-Wires the five modules together and runs the control loop:
+Wires the modules together and runs the control loop:
 
     EEGReader -> SignalProcessor -> CommandMapper -> CommandSender -> ESP32
 
-Requirement coverage:
-    EEG-03  Waits (up to 30 s) for a stable headset connection at startup.
-    UI-01   Live console dashboard.
-    UI-02   Calibration phase during which the vehicle stays stopped.
-    UI-03   Keyboard override for testing and for the demo-day fallback.
-    NFR 3.2 Control loop runs at loop.rate_hz (>= 10 Hz, default 20 Hz).
-    NFR 3.3 Acquisition and transmission each run on their own thread, so
-            neither can stall the control loop.
-
-Run ``python main.py --help`` for the command line, or see README.md.
+Run ``python main.py --help`` for the options, or see README.md.
 """
 
 from __future__ import annotations
@@ -40,11 +31,11 @@ from wifi_sender import CommandSender, TransportError, create_transport
 
 LOG = logging.getLogger("neurodrive.main")
 
-CONNECT_TIMEOUT_S = 30.0  # EEG-03
+CONNECT_TIMEOUT_S = 30.0  #
 
 
 class ManualController:
-    """Keyboard driving model (UI-03).
+    """Keyboard driving model.
 
     Mirrors the mapper's behaviour so the vehicle feels the same in either
     mode: a turn key produces a short pulse, after which the previous
@@ -104,6 +95,7 @@ class Bridge:
             resend_interval_ms=config.get("transport.resend_interval_ms", 250),
             queue_size=config.get("transport.queue_size", 32),
             turn_burst=config.get("transport.turn_burst", 3),
+            invert_turns=config.get("transport.invert_turns", False),
         )
         self.dashboard = Dashboard(
             enabled=config.get("ui.console_dashboard", True) and not args.no_dashboard,
@@ -160,7 +152,7 @@ class Bridge:
             print(f"  Connected via {info.source_name} in {info.connect_seconds:.1f}s.")
         else:
             # Not fatal: the reader keeps retrying, and the vehicle simply
-            # stays stopped until real samples arrive (EEG-05).
+            # stays stopped until real samples arrive.
             print("  WARNING: no EEG connection yet. The vehicle will not move.")
             print(f"           {self.reader.info.last_error}")
             print("           Press 'k' for keyboard override.")
@@ -236,12 +228,14 @@ class Bridge:
             processed = self.processor.tick(now)
 
             gestures = self.vision.read_all()
+            held = self.vision.held
+            held_gesture = held.value if held else None
 
             self._handle_keys(now)
             if not self.running:
                 break
 
-            command, reason = self._decide(processed, now, gestures)
+            command, reason = self._decide(processed, now, gestures, held_gesture)
             self.sender.send(command)
             self.recorder.log_cycle(processed, command, reason, samples)
             self._render(processed, now)
@@ -260,7 +254,8 @@ class Bridge:
                 next_tick = time.monotonic()
             self._update_loop_rate(now)
 
-    def _decide(self, processed: ProcessedSignal, now: float, gestures=None):
+    def _decide(self, processed: ProcessedSignal, now: float, gestures=None,
+                held_gesture=None):
         """Return the command to transmit this cycle and why."""
         if self.calibrator is not None:
             self.calibrator.feed(processed)
@@ -274,10 +269,10 @@ class Bridge:
             command = self.manual.command(now)
             # Keep the mapper's state fresh so switching back is clean,
             # but ignore what it wants while the operator is driving.
-            self.mapper.update(processed, now, gestures)
+            self.mapper.update(processed, now, gestures, held_gesture)
             return command, self.manual.reason
 
-        command = self.mapper.update(processed, now, gestures)
+        command = self.mapper.update(processed, now, gestures, held_gesture)
         return command, self.mapper.state(now).reason
 
     def _finish_calibration(self) -> None:
@@ -333,7 +328,7 @@ class Bridge:
                 self.manual.press(Command(command_name), now)
             elif command_name == "STOP":
                 # Software emergency stop while under EEG control. The
-                # hardware button (SF-01) remains the authoritative one.
+                # hardware button remains the authoritative one.
                 self.mapper.disarm()
                 self.dashboard.notify("SOFT E-STOP. Press ENTER to re-arm", 6.0)
                 LOG.warning("soft e-stop triggered from keyboard")
@@ -455,9 +450,9 @@ def apply_cli_overrides(config, args) -> None:
             # is still possible, it just has to be said explicitly.
             config.set("control.turn_source", "vision")
     if args.turn_source in ("vision", "both"):
-        # Only the flag auto-enables. A config.json that asks for vision turns
-        # while leaving the camera off is a mistake worth reporting, not one
-        # worth silently repairing.
+        # Only the flag turns the camera on. A config.json asking for
+        # vision turns with the camera off is a mistake worth reporting,
+        # not one to quietly fix.
         config.set("vision.enabled", True)
 
 

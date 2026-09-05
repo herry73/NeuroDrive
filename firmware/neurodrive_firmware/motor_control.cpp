@@ -5,9 +5,9 @@
 // ---------------------------------------------------------------------------
 // LEDC compatibility
 //
-// The ESP32 Arduino core changed its PWM API in 3.0: channels disappeared and
-// ledcAttach()/ledcWrite() now take the pin directly. Supporting both means
-// the team can use whichever core version the Arduino IDE installs.
+// The ESP32 Arduino core changed its PWM API in 3.0: channels are gone and
+// ledcAttach()/ledcWrite() take the pin directly. Supporting both means any
+// core version works.
 // ---------------------------------------------------------------------------
 
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
@@ -157,7 +157,7 @@ void motorSetup() {
 
 void motorSetState(MotorState state) {
   if (estopLatched && state != STATE_STOP) {
-    // SF-01: while the button is held, movement requests are refused.
+    // while the button is held, movement requests are refused.
     return;
   }
 
@@ -165,10 +165,10 @@ void motorSetState(MotorState state) {
     case STATE_STOP:
       baseState = STATE_STOP;
       turnStartedAt = 0;
-      // An explicit STOP from the host clears a WATCHDOG reason. Otherwise
-      // the red LED would keep blinking "no commands" after the link came
-      // back. A latched e-stop keeps its reason: the button, not the host,
-      // decides when that clears.
+      // A STOP from the host clears a WATCHDOG reason, otherwise the red
+      // LED would keep blinking "no commands" after the link came back. A
+      // latched e-stop keeps its reason: the button decides when that clears,
+      // not the host.
       if (!estopLatched) {
         stopReason = STOP_REASON_COMMAND;
       }
@@ -179,7 +179,7 @@ void motorSetState(MotorState state) {
       baseState = STATE_FORWARD;
       stopReason = STOP_REASON_NONE;
       if (currentState != STATE_TURN_LEFT && currentState != STATE_TURN_RIGHT) {
-        // Mid-turn FORWARD only updates what resumes afterwards (MV-03).
+        // Mid-turn FORWARD only updates what resumes afterwards.
         enterState(STATE_FORWARD);
       }
       break;
@@ -198,7 +198,7 @@ void motorSetState(MotorState state) {
       break;
   }
 
-  // MV-04: act now rather than waiting for the next tick.
+  // act now rather than waiting for the next tick.
   applyOutputs(false);
 }
 

@@ -1,17 +1,13 @@
 """
 Non-blocking keyboard input.
 
-Requirement coverage:
-    UI-03  Arrow keys manually send commands, for testing without a headset
-           and as Fallback Level 1 on demo day (plan section 11.3).
-
-Works on Windows (``msvcrt``) and POSIX (``termios`` + ``select``) with no
-third-party dependency. It normalises keys to short names, so the caller
-never deals with escape sequences:
+Works on Windows (msvcrt) and POSIX (termios + select) with no third-party
+dependency. Keys come back as short names, so the caller never deals with
+escape sequences:
 
     "UP" "DOWN" "LEFT" "RIGHT" "SPACE" "ESC" "ENTER" and single characters.
 
-Use it as a context manager. It restores the terminal on the way out,
+Use it as a context manager. It puts the terminal back the way it found it,
 including after an exception or a Ctrl-C.
 """
 

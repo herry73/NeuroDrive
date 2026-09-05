@@ -1,16 +1,8 @@
 """
-Threaded EEG reader.
+Reads EEG samples on a background thread.
 
-Requirement coverage:
-    EEG-01/02  Connect to the headset and parse ThinkGear packets.
-    EEG-03     Report the time taken to reach a stable connection.
-    EEG-05     Detect signal loss and surface it so the bridge can safe-stop.
-    NFR 3.1    Automatic reconnection with a 3-attempt policy.
-    NFR 3.3    Never block the main loop: acquisition runs on its own thread
-               and hands samples over through a thread-safe queue.
-
-The reader owns an :class:`~eeg_sources.EEGSource` and nothing else. It does
-no thresholding and no smoothing. That is the signal processor's job.
+It handles the connection and hands samples over, nothing else. Smoothing
+and thresholds are the signal processor's job.
 """
 
 from __future__ import annotations
@@ -132,7 +124,7 @@ class EEGReader:
         return samples
 
     def wait_for_connection(self, timeout: float = 30.0) -> bool:
-        """Block until the link is up. Returns False on timeout (EEG-03)."""
+        """Block until the link is up. Returns False on timeout."""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self.info.status is ReaderStatus.CONNECTED:
@@ -258,7 +250,7 @@ class EEGReader:
                 for sample in samples:
                     self._publish(sample)
             else:
-                # EEG-05: the port is open but nothing is arriving (headset
+                # the port is open but nothing is arriving (headset
                 # switched off, taken off the head, out of range).
                 if (
                     self._last_sample_time is not None
@@ -278,7 +270,7 @@ class EEGReader:
         self._close_source()
 
     def _emit_disconnected(self) -> None:
-        """Push a sentinel sample so the control chain safe-stops (EEG-05)."""
+        """Push a sentinel sample so the control chain safe-stops."""
         self._publish(
             EEGSample(
                 timestamp=time.monotonic(),

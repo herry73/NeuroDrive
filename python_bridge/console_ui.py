@@ -1,19 +1,14 @@
 """
 Live console dashboard.
 
-Requirement coverage:
-    EEG-06  Display live attention / blink values.
-    UI-01   Show connection status, EEG values and the current command.
+No dependencies on purpose. It redraws a fixed block of lines in place with
+ANSI escapes, which works in Windows Terminal, PowerShell, VS Code and any
+POSIX terminal. When the output is not a terminal (piped to a file, run in
+CI) it falls back to plain periodic lines instead of writing escape codes
+into the capture.
 
-No dependencies, on purpose. It redraws a fixed block of lines in place
-using ANSI escapes, which works in Windows Terminal, PowerShell 7, VS Code
-and every POSIX terminal. If the output is not a TTY (piped to a file, run
-under CI) it degrades to plain periodic lines instead of scribbling escape
-codes into the capture.
-
-This exists for plan section 12.3, "make the invisible visible". The
-attention bar on a projector is what lets an audience follow what the
-operator's brain is doing.
+The point is to make the invisible visible: an attention bar on a projector
+lets an audience follow what is going on.
 """
 
 from __future__ import annotations
@@ -56,10 +51,9 @@ STATUS_COLOURS = {
 }
 
 
-#: Glyphs used by the dashboard, and their ASCII stand-ins. Redirecting
-#: output on Windows drops stdout to the locale codepage (cp1252), which
-#: cannot encode box-drawing characters. Without a fallback, piping the
-#: bridge to a file kills the process mid-run.
+#: Dashboard glyphs, with ASCII versions to fall back on. Piping output
+#: on Windows switches stdout to cp1252, which cannot encode box-drawing
+#: characters, and without a fallback that kills the process mid-run.
 GLYPHS_UNICODE = {
     "bar_full": "█",
     "bar_empty": "·",

@@ -1,21 +1,12 @@
 """
-EEG acquisition sources.
+Where EEG samples come from.
 
-Requirement coverage:
-    EEG-01  Bluetooth connection to the MindWave Mobile 2.
-    NFR 3.6 The acquisition layer sits behind one small interface
-            (:class:`EEGSource`) so another device, or a simulator, can
-            replace the headset without touching the rest of the
-            application.
+    SerialThinkGearSource   the real headset over Bluetooth
+    MockSource              fake signal, no hardware needed
+    ReplaySource            plays back a recorded CSV
 
-Three sources ship with the project:
-
-    ``SerialThinkGearSource``  real headset over a Bluetooth SPP serial port
-    ``MockSource``             synthetic signal, no hardware needed
-    ``ReplaySource``           plays back a CSV recorded by ``data_logger.py``
-
-``MockSource`` synthesises genuine ThinkGear packets rather than fabricating
-samples, so mock mode still runs the real parser.
+MockSource builds real ThinkGear packets rather than faking samples, so mock
+mode still runs the real parser.
 """
 
 from __future__ import annotations
@@ -79,7 +70,7 @@ class EEGSource(ABC):
         """Return every sample available since the previous call.
 
         Must not block for longer than a few hundred milliseconds so the
-        reader thread stays responsive (NFR 3.3).
+        reader thread stays responsive.
         """
 
     def close(self) -> None:
@@ -215,7 +206,7 @@ class MockSource(_ThinkGearByteSource):
 
     Produces a slow attention sweep (so FORWARD/STOP alternate naturally),
     periodic blinks above the trigger threshold, and occasional bursts of
-    poor signal quality so the SF-03 gate can be exercised.
+    poor signal quality so the gate can be exercised.
     """
 
     name = "mock"

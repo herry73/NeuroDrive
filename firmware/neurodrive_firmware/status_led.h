@@ -1,8 +1,8 @@
 /*
  * Status indicators.
  *
- * Should Have (plan section 10.2): LED status indicators on the vehicle so
- * the audience can see what the system is doing without reading the laptop.
+ * LEDs on the vehicle, so you can see what it is doing without looking at
+ * the laptop.
  *
  *   Green  (GPIO 19)  driving forward
  *   Yellow (GPIO 18)  turning
@@ -11,8 +11,8 @@
  *   Built-in (GPIO 2) link heartbeat: solid when the host is talking to us,
  *                     slow blink while waiting for the first command
  *
- * Every LED is optional. If the team runs out of time or GPIO, leave them
- * unwired; nothing else depends on this module.
+ * Every LED is optional. Leave them unwired if you like; nothing else
+ * depends on this module.
  */
 
 #ifndef NEURODRIVE_STATUS_LED_H

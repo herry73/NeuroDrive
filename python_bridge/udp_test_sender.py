@@ -1,9 +1,8 @@
 """
 Standalone vehicle test tool. No EEG headset required.
 
-This is the Week 1 integration tool (M5's deliverable): it proves the
-laptop -> ESP32 -> L298N -> motors chain works before any brain signal is
-involved, and it stays useful afterwards for wiring checks and demo warm-ups.
+Proves the laptop -> ESP32 -> L298N -> motors chain works before any brain
+signal is involved. Handy afterwards for wiring checks and warm-ups.
 
 Usage
 -----

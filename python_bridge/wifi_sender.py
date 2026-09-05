@@ -1,21 +1,12 @@
 """
-Command transport: laptop -> ESP32.
+Sends commands from the laptop to the ESP32.
 
-Requirement coverage:
-    COM-02  Relay commands over WiFi UDP, with USB serial as the fallback.
-    COM-03  Keep the send path off the EEG loop so latency stays under 500 ms.
-    COM-04  Tolerate dropped packets: the current command is re-sent
-            periodically, so a lost packet self-heals within one interval.
-    COM-05  Consume the firmware's acknowledgement and measure round-trip time.
-    NFR 3.2 UDP, not TCP. No handshake, no head-of-line blocking.
-    NFR 3.3 Sending runs on its own thread; ``send()`` never blocks.
+One ASCII character followed by a newline:
 
-Wire format (docs/INTERFACE_CONTRACT.md): one ASCII character plus ``\\n``.
+    F forward    L left    R right    S stop
 
-    "F\\n" forward   "L\\n" left   "R\\n" right   "S\\n" stop
-
-The periodic re-send doubles as the keepalive that feeds the firmware's
-2-second watchdog (SF-02): if this process dies, the vehicle stops on its own.
+The same command is re-sent periodically, which also feeds the firmware's
+2-second watchdog. If this process dies, the vehicle stops on its own.
 """
 
 from __future__ import annotations
@@ -30,7 +21,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Optional
 
-from command_mapper import COMMANDS_BY_WIRE, Command
+from command_mapper import COMMANDS_BY_WIRE, Command, mirror_turn
 
 LOG = logging.getLogger("neurodrive.tx")
 
@@ -148,7 +139,7 @@ class UdpTransport(Transport):
 class SerialTransport(Transport):
     """Fallback transport: USB cable straight to the ESP32.
 
-    Used when the venue's WiFi is unusable (plan section 8.4). The firmware
+    Used when the venue's WiFi is unusable. The firmware
     accepts exactly the same ASCII commands on its USB serial port.
     """
 
@@ -270,8 +261,10 @@ class CommandSender:
         resend_interval_ms: int = 250,
         queue_size: int = 32,
         turn_burst: int = 3,
+        invert_turns: bool = False,
     ) -> None:
         self.transport = transport
+        self.invert_turns = invert_turns
         self.resend_interval_s = max(0.02, resend_interval_ms / 1000.0)
         self.turn_burst = max(1, turn_burst)
         self.stats = SenderStats()
@@ -356,11 +349,9 @@ class CommandSender:
         while not self._stop_event.is_set():
             now = time.monotonic()
 
-            # Wait for the next command, but never longer than one ack poll.
-            # Blocking for a whole resend interval would delay acknowledgement
-            # handling by up to that interval, which would show up as phantom
-            # round-trip time in the COM-03 latency figures, and would slow
-            # shutdown down.
+            # Wait for the next command, but no longer than one ack
+            # poll. Blocking for a whole resend interval would delay acks,
+            # which shows up as fake round-trip time and slows shutdown.
             until_resend = self.resend_interval_s - (now - self._last_send_time)
             timeout = max(0.001, min(ACK_POLL_INTERVAL_S, until_resend))
             try:
@@ -382,14 +373,19 @@ class CommandSender:
                 self._current is not None
                 and (time.monotonic() - self._last_send_time) >= self.resend_interval_s
             ):
-                # COM-04 / SF-02: keepalive re-send of the current command.
+                # keepalive re-send of the current command.
                 self._send_now(self._current, repeats=1)
                 self.stats.keepalives += 1
 
             self._drain_acks()
 
     def _send_now(self, command: Command, repeats: int = 1) -> None:
-        payload = f"{command.wire}\n".encode("ascii")
+        # Every outgoing byte goes through here, so a mirrored vehicle is
+        # corrected in one place for EEG, webcam and keyboard alike. The
+        # command keeps its name elsewhere, so the dashboard and CSV still
+        # show the direction the vehicle actually goes.
+        on_wire = mirror_turn(command) if self.invert_turns else command
+        payload = f"{on_wire.wire}\n".encode("ascii")
         for _ in range(repeats):
             try:
                 self.transport.send(payload)

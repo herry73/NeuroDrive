@@ -1,24 +1,12 @@
 """
-Driving policy: conditioned signal -> discrete vehicle command.
+Decides what the vehicle should do: signal in, command out.
 
-Requirement coverage:
-    MV-01  Four movement states: FORWARD, LEFT, RIGHT, STOP.
-    MV-03  Turns are a timed pulse, after which the previous state resumes.
-    SP-02  Attention at or above the forward threshold (default 60) drives.
-    SP-03  Attention below the stop threshold (default 40) held for longer
-           than 1 s stops the vehicle.
-    SP-05  Blink gestures produce the direction commands.
-    SF-03  Commands are withheld while the EEG signal quality is poor.
-    UI-02  Nothing is emitted while the calibration phase is running.
+Thresholds all come from config.json, so tuning the vehicle never means
+editing this file.
 
-All thresholds live in ``config.json`` (SP-07), so tuning the vehicle's
-behaviour never requires editing this file.
-
-Hysteresis
-----------
-Between the stop and forward thresholds the current state is *held*. Without
-that dead band an attention value hovering around a single threshold makes
-the vehicle stutter between FORWARD and STOP several times a second.
+Between the stop and forward thresholds the vehicle holds whatever it was
+doing. Without that gap, an attention value bouncing around one threshold
+makes it stutter between FORWARD and STOP several times a second.
 """
 
 from __future__ import annotations
@@ -43,7 +31,7 @@ class Command(str, Enum):
 
     @property
     def wire(self) -> str:
-        """The single ASCII character sent on the wire (Appendix A)."""
+        """The single ASCII character sent on the wire."""
         return WIRE_CHARS[self]
 
     @property
@@ -52,7 +40,7 @@ class Command(str, Enum):
 
 
 #: Command -> on-the-wire character. Kept next to the enum so the protocol
-#: definition lives in exactly one place (see docs/INTERFACE_CONTRACT.md).
+#: definition lives in exactly one place.
 WIRE_CHARS = {
     Command.FORWARD: "F",
     Command.LEFT: "L",
@@ -60,8 +48,20 @@ WIRE_CHARS = {
     Command.STOP: "S",
 }
 
-#: Reverse lookup, used by the firmware simulator and the tests.
+#: Reverse lookup, for decoding a command character back to a Command.
 COMMANDS_BY_WIRE = {char: command for command, char in WIRE_CHARS.items()}
+
+#: LEFT <-> RIGHT, for vehicles whose steering or drive motors are wired
+#: mirrored. FORWARD and STOP are unaffected.
+MIRRORED_TURNS = {
+    Command.LEFT: Command.RIGHT,
+    Command.RIGHT: Command.LEFT,
+}
+
+
+def mirror_turn(command: "Command") -> "Command":
+    """Swap LEFT and RIGHT, passing FORWARD and STOP straight through."""
+    return MIRRORED_TURNS.get(command, command)
 
 VALID_COMMANDS = [command.value for command in Command]
 
@@ -99,6 +99,7 @@ class CommandMapper:
         first_turn_direction: str = "LEFT",
         require_good_signal: bool = True,
         turn_source: str = "blink",
+        hold_turn_while_raised: bool = True,
     ) -> None:
         if attention_stop_threshold >= attention_forward_threshold:
             raise ValueError(
@@ -117,6 +118,7 @@ class CommandMapper:
         self.blink_mode = blink_mode
         self.require_good_signal = require_good_signal
         self.turn_source = turn_source
+        self.hold_turn_while_raised = hold_turn_while_raised
 
         self._first_turn = Command[first_turn_direction]
         self._next_turn = self._first_turn
@@ -128,6 +130,7 @@ class CommandMapper:
         self._armed = False
         self._turns_issued = 0
         self._safe_stops = 0
+        self._held_turn = False
 
     # -- lifecycle ----------------------------------------------------------
 
@@ -154,17 +157,16 @@ class CommandMapper:
         processed: ProcessedSignal,
         now: float,
         gestures: Optional[List["GestureEvent"]] = None,
+        held_gesture: Optional[str] = None,
     ) -> Command:
-        """Fold one conditioned signal into the policy and return a command.
+        """Take one processed signal and return the command to send.
 
-        ``gestures`` carries accepted webcam raises for this cycle. It stays
-        optional so every existing caller and test keeps working unchanged,
-        and it is ignored unless ``turn_source`` admits vision.
+        gestures holds any webcam raises from this cycle. It is optional, and
+        ignored unless turn_source allows vision.
 
-        Gestures are deliberately gated behind the same safety checks as
-        blinks. No arm, no trustworthy EEG, no turning: a hand raise must not
-        be able to move a vehicle whose operator the headset has lost track
-        of (EEG-05, SF-03).
+        Gestures go through the same safety checks as blinks: not armed, or
+        no trustworthy EEG, means no turning. A raised hand must not move a
+        vehicle whose operator the headset has lost track of.
         """
         if not self._armed:
             self._base = Command.STOP
@@ -173,7 +175,7 @@ class CommandMapper:
             return Command.STOP
 
         if not self._signal_is_drivable(processed):
-            # EEG-05 / SF-03: no trustworthy signal means no movement.
+            # no trustworthy signal means no movement.
             if self._base is not Command.STOP or self._turn_command is not None:
                 self._safe_stops += 1
             self._base = Command.STOP
@@ -185,10 +187,11 @@ class CommandMapper:
         if self.turn_source in ("blink", "both"):
             self._apply_blink_events(processed.blink_events, now)
         if gestures and self.turn_source in ("vision", "both"):
-            # Applied second, so a hand raise wins a tie against a blink that
-            # landed in the same 50 ms cycle. Raising an arm is deliberate;
-            # a blink can be involuntary.
+            # Applied after blinks, so a hand raise wins if both land in
+            # the same cycle. Raising an arm is deliberate; a blink may not be.
             self._apply_gesture_events(gestures, now)
+        if self.turn_source in ("vision", "both"):
+            self._apply_held_gesture(held_gesture, now)
 
         if self._turn_command is not None:
             if now < self._turn_until:
@@ -215,14 +218,14 @@ class CommandMapper:
 
     def _apply_attention_policy(self, attention: float, now: float) -> None:
         if attention >= self.forward_threshold:
-            # SP-02
+            #
             self._low_since = None
             self._base = Command.FORWARD
             self._reason = (
                 f"attention {attention:.0f} >= {self.forward_threshold:.0f} -> forward"
             )
         elif attention < self.stop_threshold:
-            # SP-03: only stop once the low reading has persisted.
+            # only stop once the low reading has persisted.
             if self._low_since is None:
                 self._low_since = now
             held = now - self._low_since
@@ -266,9 +269,35 @@ class CommandMapper:
             self._turns_issued += 1
             self._reason = f"{direction.value.lower()} hand raised -> {direction.value}"
 
+    def _apply_held_gesture(self, held_gesture: Optional[str], now: float) -> None:
+        """Keep turning while the arm stays up.
+
+        A raise on its own gives one short pulse, which expires even if the
+        arm is still up. Here the deadline is pushed forward every cycle the
+        hand is held, and dropped as soon as it comes down.
+        """
+        if not self.hold_turn_while_raised:
+            return
+
+        if held_gesture is None:
+            # Only clear a turn this method is responsible for: a blink turn
+            # running concurrently must still be allowed to finish.
+            if self._held_turn:
+                self._held_turn = False
+                self._clear_turn()
+            return
+
+        direction = Command[held_gesture]
+        self._held_turn = True
+        if self._turn_command is not direction:
+            self._turns_issued += 1
+        self._turn_command = direction
+        self._turn_until = now + self.turn_repeat_s
+        self._reason = f"{direction.value.lower()} hand held -> {direction.value}"
+
     def _direction_for(self, event: BlinkEvent) -> Command:
         if self.blink_mode == "single_double":
-            # SP-05 variant: one blink turns one way, two blinks the other.
+            # variant: one blink turns one way, two blinks the other.
             other = Command.RIGHT if self._first_turn is Command.LEFT else Command.LEFT
             return self._first_turn if event is BlinkEvent.SINGLE else other
 
@@ -282,6 +311,7 @@ class CommandMapper:
     def _clear_turn(self) -> None:
         self._turn_command = None
         self._turn_until = 0.0
+        self._held_turn = False
 
     # -- introspection ------------------------------------------------------
 
@@ -347,4 +377,5 @@ def create_mapper(config) -> CommandMapper:
         first_turn_direction=section.get("first_turn_direction", "LEFT"),
         require_good_signal=section.get("require_good_signal", True),
         turn_source=section.get("turn_source", "blink"),
+        hold_turn_while_raised=section.get("hold_turn_while_raised", True),
     )

@@ -6,17 +6,16 @@
  *
  * Architecture: four modules, each with one job.
  *
- *     safety.*        emergency stop and watchdog        (SF-01, SF-02)
- *     comm.*          UDP + serial receive, ack          (COM-02, COM-04/05)
- *     motor_control.* state machine and PWM output       (MV-01..MV-05)
- *     status_led.*    indicator LEDs                     (Should Have)
+ *     safety.*        emergency stop and watchdog
+ *     comm.*          UDP + serial receive, ack
+ *     motor_control.* state machine and PWM output
+ *     status_led.*    indicator LEDs
  *
  * loop() runs them in that order deliberately: safety first, so a tripped
  * watchdog or a pressed button stops the vehicle before any newly arrived
  * command can be acted on.
  *
- * Pin assignment: config.h (project plan, Appendix C).
- * Wire protocol:  docs/INTERFACE_CONTRACT.md.
+ * Pin assignment: config.h.
  *
  * Build: Arduino IDE (open this folder) or PlatformIO (`pio run -t upload`
  * from firmware/). See firmware/README.md.
@@ -125,9 +124,8 @@ void loop() {
   }
 #endif
 
-  // No delay(): the loop is fully non-blocking, which is what keeps the
-  // command-to-motor path under the 10 ms budget in NFR 3.2. A 1 ms yield
-  // keeps the ESP32's WiFi and idle tasks fed without adding meaningful
-  // latency.
+  // No delay(): the loop never blocks, which keeps the command-to-motor
+  // path under 10 ms. The 1 ms yield keeps the ESP32's WiFi and idle tasks
+  // fed without adding real latency.
   delay(1);
 }
