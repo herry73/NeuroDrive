@@ -352,7 +352,7 @@ either route, and every default shown is what a fresh clone actually runs.
 A raised hand goes through the same safety gates as everything else, so the
 camera cannot move a vehicle whose operator the headset has lost track of.
 
-Every number here lives in `config.json` — see [Setting parameters
+Every number here lives in `config.json`: see [Setting parameters
 yourself](#setting-parameters-yourself) above.
 
 `control.hold_turn_while_raised` decides whether a raised hand turns for as
@@ -387,11 +387,11 @@ Almost every failure is the Bluetooth link, not the software.
 
 | What you see | What it means |
 |---|---|
-| `poor_signal` stuck at 200, "connected" | Wrong serial port — you have the incoming one. See step 2 above |
+| `poor_signal` stuck at 200, "connected" | Wrong serial port: you have the incoming one. See step 2 above |
 | *Semaphore timeout* | The headset is not answering: off, asleep, out of range, or a flat battery |
 | *Pipe not connected* | The link came up and dropped. Usually a weak battery or a stale pairing; retry, then re-pair |
 | *File not found*, or the port is missing | The port does not exist. The pairing was removed, or it was renumbered on re-pair |
-| *Access denied* | Something else holds the port — another bridge, or the NeuroSky app |
+| *Access denied* | Something else holds the port, another bridge, or the NeuroSky app |
 
 A fresh AAA fixes more of these than anything else. The headset also holds
 only one connection at a time, so turn Bluetooth off on any phone or tablet
