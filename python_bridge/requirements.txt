@@ -1,9 +1,5 @@
 # NeuroDrive Python bridge dependencies.
 #
-# The bridge runs on the standard library alone in mock and replay mode, so
-# you can clone the repo and drive the whole pipeline with nothing installed.
-# pyserial is only needed to talk to real hardware.
-#
 #     pip install -r requirements.txt
 
 # Bluetooth serial link to the MindWave Mobile 2, and the USB serial
@@ -11,14 +7,12 @@
 # if you actually select a serial source or transport.
 pyserial>=3.5
 
-# Webcam gesture control (vision.py) needs two more packages. They are left
-# out of this file on purpose: vision.py imports them lazily inside its own
-# thread, so the bridge runs on a machine that has neither, as long as
-# control.turn_source stays on "blink". Install them only on the laptop that
-# will actually run the camera:
-#
-#     pip install mediapipe opencv-python
-#
+# The webcam channel, which is how the vehicle steers. vision.py imports
+# both lazily inside its own thread, so the bridge still starts without
+# them; it just has no way to turn.
+mediapipe
+opencv-python
+
 # The pose model is not a pip package, but it is committed to the repository
 # at python_bridge/models/pose_landmarker_lite.task, so there is nothing to
 # download. See vision.README.md.

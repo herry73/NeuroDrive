@@ -32,7 +32,6 @@
     "double_blink_window_ms": 500,
     "poor_signal_cutoff": 25,
     "blink_from_raw": {
-      "_note": "Optional fallback if the headset does not emit 0x16 blink rows.",
       "enabled": false,
       "amplitude_threshold": 300,
       "refractory_ms": 400
@@ -40,8 +39,8 @@
   },
 
   "vision": {
-    "_readme": "Webcam gesture input. The user raises a hand, the vehicle turns that way. Needs mediapipe and the model in models/. Set control.turn_source to vision or both to actually use it.",
-    "enabled": false,
+    "_readme": "Webcam gesture input. The user raises a hand, the vehicle turns that way. Needs mediapipe and opencv-python (both in requirements.txt) and the model in models/.",
+    "enabled": true,
     "camera_index": 0,
     "width": 640,
     "height": 480,
@@ -64,11 +63,10 @@
     "attention_forward_threshold": 60,
     "attention_stop_threshold": 40,
     "attention_stop_hold_ms": 1000,
-    "_turn_source": "blink = turn on eye blinks (default) | vision = turn on raised hands | both",
-    "turn_source": "blink",
+    "_turn_source": "vision = the vehicle turns when the user raises a hand.",
+    "turn_source": "vision",
     "_hold_turn_while_raised": "true = the vehicle keeps turning for as long as the hand stays up, and straightens when it comes down. false = one raise gives one turn pulse of turn_command_repeat_ms.",
     "hold_turn_while_raised": true,
-    "_blink_mode": "alternate = each blink turns the other way | single_double = one blink LEFT, two blinks RIGHT",
     "blink_mode": "alternate",
     "first_turn_direction": "LEFT",
     "turn_command_repeat_ms": 500,
@@ -89,7 +87,7 @@
       "port": "COM6",
       "baudrate": 115200
     },
-    "_invert_turns": "Set true when the vehicle turns the opposite way to the command, e.g. pressing 'a' steers it right. Applied to the outgoing byte only, so it corrects blink, webcam and keyboard turns together.",
+    "_invert_turns": "Set true when the vehicle turns the opposite way to the command, e.g. pressing 'a' steers it right. Applied to the outgoing byte only, so it corrects webcam and keyboard turns together.",
     "invert_turns": true,
     "resend_interval_ms": 250,
     "queue_size": 32

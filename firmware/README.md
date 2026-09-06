@@ -10,8 +10,8 @@ The sources live in `neurodrive_firmware/`, which is both a valid Arduino
 sketch folder and the PlatformIO source directory. There is no duplicated
 copy of the code.
 
-**First, always:** copy `neurodrive_firmware/secrets.h.example` to
-`neurodrive_firmware/secrets.h`.
+The build needs `neurodrive_firmware/secrets.h`, which is a copy of
+`neurodrive_firmware/secrets.h.example` in the same folder.
 
 `secrets.h` holds the WiFi credentials and is git-ignored. The build fails
 without it, on purpose, so nobody commits a password by accident. The
@@ -73,16 +73,17 @@ Three rules, most expensive to break first:
    high, PWM does nothing, and the motors only ever run at full speed.
 
 The L298N's onboard 5 V regulator can power the ESP32 at 7.4 V input, but it
-gets hot and sags under motor load. Use a separate buck converter.
+gets hot and sags under motor load, which is why the 5 V rail comes from a
+separate buck converter.
 
 ### Emergency stop
 
 GPIO 4 is the **signalling** half. The firmware latches STOP and refuses
 movement commands while someone holds the button down.
 
-That is not enough on its own. The emergency stop must also **physically
-interrupt the motor supply**, with a switch in the battery line. Firmware can
-hang. A switch cannot. Wire both.
+That is not enough on its own. The other half is a switch in the battery
+line that **physically interrupts the motor supply**. Firmware can hang; a
+switch cannot, so both halves exist.
 
 ---
 
@@ -133,8 +134,8 @@ Three rules that are easy to get wrong:
 | Built-in, solid | Commands are arriving |
 | Built-in, slow blink | Waiting for the first command |
 
-The red-blink patterns are worth pointing out during the demo: they make the
-watchdog visible without anyone reading a screen.
+The two red-blink patterns distinguish a watchdog stop from a latched
+emergency stop without anyone reading a screen.
 
 ---
 
@@ -142,7 +143,7 @@ watchdog visible without anyone reading a screen.
 
 | Setting | Default | Notes |
 |---|---|---|
-| `SPEED_FORWARD_PCT` | 50 | Demo speed. Raise carefully |
+| `SPEED_FORWARD_PCT` | 50 | Forward duty cycle, as a percentage |
 | `SPEED_TURN_PCT` | 55 | Turns need more torque to break static friction |
 | `TRIM_LEFT_PCT` / `TRIM_RIGHT_PCT` | 100 / 100 | Straight-line trim |
 | `MIN_MOVE_DUTY` | 60 | Below this, motors buzz instead of turning |
@@ -161,22 +162,23 @@ watchdog visible without anyone reading a screen.
 
 ### Driving straight
 
-Two "identical" motors never match. On a straight-line run, note which way
-the vehicle drifts and reduce that side's trim in `config.h`:
+Two "identical" motors never match, so the vehicle drifts to one side under
+equal duty. `TRIM_LEFT_PCT` and `TRIM_RIGHT_PCT` scale each side
+independently, and lowering the faster side's trim straightens the run:
 
 ```c
 #define TRIM_LEFT_PCT 100
 #define TRIM_RIGHT_PCT 92   // right motor was faster; slow it down
 ```
 
-Adjust in steps of 5, re-flash, re-test. Leave the values that work in
-`config.h` — that file is the record.
+Both default to 100, meaning no correction. The values live in `config.h`,
+so they take effect at the next flash.
 
 ### AP mode versus station mode
 
 **AP mode (default).** The ESP32 creates its own network. The laptop joins
-it, the vehicle is always `192.168.4.1`, and no venue WiFi is involved. Use
-this for the demo. It removes an entire category of failure.
+it, the vehicle is always `192.168.4.1`, and no existing network is involved,
+so the address never changes and nothing else can interfere with it.
 
 **Station mode** (`WIFI_USE_AP 0`). The ESP32 joins an existing network. It
 prints its IP at boot; put that in `python_bridge/config.json` as
@@ -211,8 +213,9 @@ commented-out line at the bottom of that file for exactly this.
 
 ### One motor runs backwards
 
-Swap that motor's two wires at the L298N screw terminals. Do not fix it in
-software; the wiring should match the pin map.
+That motor's two wires are reversed at the L298N screw terminals, and
+swapping them there is the fix. Correcting it in software instead would leave
+the wiring disagreeing with the pin map above.
 
 ### It moves, then stops after ~2 seconds
 
@@ -227,8 +230,8 @@ python ../python_bridge/udp_test_sender.py --ping --esp32-ip 192.168.4.1
 ```
 
 If that fails: is the laptop on the ESP32's network? Is a firewall blocking
-outbound UDP 4210? As a fallback, set `transport.mode` to `serial`, use the
-USB cable, and carry on working.
+outbound UDP 4210? Setting `transport.mode` to `serial` sends the same
+commands over the USB cable instead, which bypasses the network entirely.
 
 ### Debugging without the bridge
 
