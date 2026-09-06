@@ -33,7 +33,7 @@ actually uses, which is what a fresh clone runs.
 | `source` | `mock` | `serial` (real headset), `mock` (synthetic), `replay` (recorded CSV) |
 | `signal_timeout_ms` | `2000` | No samples for this long ⇒ report signal loss and safe-stop |
 
-**Set `source` to `serial` for real use.** The default is `mock` so a fresh
+`serial` is the setting for a real headset. The default is `mock` so a fresh
 clone runs on any laptop with no hardware.
 
 ### `eeg.serial`: the MindWave over Bluetooth
@@ -41,9 +41,9 @@ clone runs on any laptop with no hardware.
 | Key | Default | Meaning |
 |---|---|---|
 | `port` | `COM4` | The serial port the paired headset streams on |
-| `baudrate` | `57600` | Fixed by the MindWave Mobile 2. Do not change |
+| `baudrate` | `57600` | Fixed by the MindWave Mobile 2 hardware |
 | `read_timeout_s` | `0.2` | Blocking read timeout; also paces the reader thread |
-| `reconnect_attempts` | `3` | After this many failures the status becomes `FAILED`, then retries continue slowly so a demo can recover without a restart |
+| `reconnect_attempts` | `3` | After this many failures the status becomes `FAILED`, then retries continue slowly, so a headset that comes back is picked up without restarting the bridge |
 | `reconnect_delay_s` | `2.0` | Wait between attempts |
 
 > **Finding the port.** Pair the headset, then list what appeared:
@@ -56,7 +56,7 @@ clone runs on any laptop with no hardware.
 > hardware ID contains the headset's MAC address. The other shows
 > `000000000000`, opens instantly, and then never delivers a byte.
 
-### `eeg.replay`: recorded sessions (demo fallback)
+### `eeg.replay`: recorded sessions
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -66,17 +66,14 @@ clone runs on any laptop with no hardware.
 
 `logs/demo_session.csv` is committed, so `python main.py --source replay`
 works from a fresh clone with no hardware and no setup. Point `csv_path` at
-any `session_*.csv` a previous run wrote to replay that run instead. That is
-how a good session becomes the fallback demo.
+any `session_*.csv` a previous run wrote to replay that run instead.
 
 ### `eeg.mock`: synthetic signal, no hardware
 
 | Key | Default | Meaning |
 |---|---|---|
 | `seed` | `42` | Fixed seed ⇒ reproducible runs, which is what makes it useful in tests |
-| `blink_interval_s` | `8.0` | Seconds between synthetic blinks |
 | `attention_period_s` | `20.0` | Period of the attention sweep. Lower ⇒ the vehicle starts and stops more often |
-| `emit_raw` | `false` | Also generate the 512 Hz raw wave (only needed to test `blink_from_raw`) |
 
 ---
 
@@ -85,32 +82,18 @@ how a good session becomes the fallback demo.
 | Key | Default | Meaning |
 |---|---|---|
 | `attention_window` | `5` | Rolling-average length. Higher = steadier but slower to react |
-| `blink_strength_threshold` | `150` | Minimum blink strength that counts. Raise if ordinary blinking triggers turns |
-| `blink_debounce_ms` | `300` | Minimum gap between accepted blinks. Raise if one blink registers twice |
-| `double_blink_window_ms` | `500` | Two blinks closer than this are one *double* gesture (only used in `single_double` mode) |
 | `poor_signal_cutoff` | `25` | Above this, the headset's own quality metric says the signal is unusable, and the bridge pauses commands. `0` = perfect contact, `200` = not on a head |
-
-### `signal_processing.blink_from_raw`: fallback detector
-
-Off by default. Enable only if your headset does not emit blink rows (0x16).
-It detects blinks from large excursions in the raw wave instead. Requires
-`eeg.mock.emit_raw` or a real headset streaming raw data.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `enabled` | `false` | Turn the fallback on |
-| `amplitude_threshold` | `300` | Raw-wave magnitude that counts as a blink artefact |
-| `refractory_ms` | `400` | Ignore further peaks for this long (one blink is many samples) |
 
 ---
 
-## `vision`: the webcam channel
+## `vision`: how the vehicle turns
 
-Off by default. [`vision.README.md`](vision.README.md) covers it in full.
+The webcam is the steering input: a raised hand turns the vehicle that way.
+[`vision.README.md`](vision.README.md) covers it in full.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `enabled` | `false` | Turn the camera thread on |
+| `enabled` | `true` | The camera thread. Set `false` and the vehicle has no way to turn |
 | `camera_index` | `0` | Which camera |
 | `width` / `height` | `640` / `480` | Capture resolution |
 | `fps_limit` | `15` | Camera frame rate. Never touches the control loop |
@@ -120,7 +103,6 @@ Off by default. [`vision.README.md`](vision.README.md) covers it in full.
 | `hold_frames` | `3` | Consecutive frames a raise must persist |
 | `refractory_ms` | `1200` | Quiet period after an accepted gesture |
 | `repeat_while_held_ms` | `0` | `0` = one raise, one gesture. Above `0`, a held arm re-fires this often |
-| `swap_sides` | `false` | Set only if the turns come out mirrored |
 | `preview` | `false` | Show the camera window |
 
 ---
@@ -132,29 +114,26 @@ Off by default. [`vision.README.md`](vision.README.md) covers it in full.
 | `attention_forward_threshold` | `60` | At or above this smoothed attention, drive forward |
 | `attention_stop_threshold` | `40` | Below this, start the stop timer. **Must be below the forward threshold.** The validator enforces it |
 | `attention_stop_hold_ms` | `1000` | How long attention must stay low before stopping. Prevents one dip from halting the vehicle |
-| `turn_source` | `blink` | `blink`, `vision`, or `both` |
+| `turn_source` | `vision` | Raised hands produce LEFT and RIGHT |
 | `hold_turn_while_raised` | `true` | `true` = the vehicle keeps turning while the hand is up, and straightens when it comes down. `false` = one raise gives one pulse |
-| `blink_mode` | `alternate` | `alternate`: each blink turns the other way (fastest). `single_double`: one blink one way, two blinks the other (adds ~500 ms while classifying) |
-| `first_turn_direction` | `LEFT` | Which way the first blink turns. In `single_double` mode, the direction a *single* blink means |
 | `turn_command_repeat_ms` | `500` | How long a turn persists without a fresh trigger. See below |
 | `calibration_seconds` | `15` | Startup phase during which the vehicle cannot move |
-| `require_good_signal` | `true` | Whether poor signal quality pauses commands. Leave `true` |
+| `require_good_signal` | `true` | Whether poor signal quality pauses commands |
 
 ### How long a turn lasts
 
 `turn_command_repeat_ms` sets a deadline. The bridge keeps transmitting the
 turn until that deadline passes, then returns to whatever it was doing.
 
-A blink is a one-shot trigger, so a blink turn lasts the full 500 ms and
-stops.
+With `hold_turn_while_raised` set to `true`, the deadline is pushed forward
+on every control cycle for as long as the hand stays up, and cleared the
+moment it comes down. The turn therefore lasts exactly as long as the raise.
+Here the value is a grace window that covers the gap between camera frames,
+not a turn length — the camera runs at 15 fps and the control loop at 20 Hz,
+so anything below roughly 200 ms will make a held turn stutter.
 
-A raised hand is not. With `hold_turn_while_raised` set to `true`, the
-deadline is pushed forward on every control cycle for as long as the hand
-stays up, and cleared the moment it comes down. The turn therefore lasts
-exactly as long as the raise. Here the value is a grace window that covers
-the gap between camera frames, not a turn length — the camera runs at 15 fps
-and the control loop at 20 Hz, so anything below roughly 200 ms will make a
-held turn stutter.
+With it set to `false`, a raise gives one pulse of `turn_command_repeat_ms`
+and the vehicle straightens even if the arm is still up.
 
 The firmware caps a single pulse at `TURN_PULSE_MS` (300 ms in the firmware's
 `config.h`) and will not restart that timer for a re-sent command. A turn
@@ -165,8 +144,8 @@ continuous one, which is what keeps the vehicle turning while the hand is up.
 
 Between `attention_stop_threshold` and `attention_forward_threshold` the
 vehicle **holds** whatever it is doing. Without that gap, attention hovering
-near one threshold would make the vehicle stutter several times a second.
-Keep the two 15-20 apart.
+near one threshold would make the vehicle stutter several times a second. A
+gap of 15-20 is wide enough to prevent that.
 
 ---
 
@@ -175,7 +154,6 @@ Keep the two 15-20 apart.
 | Key | Default | Meaning |
 |---|---|---|
 | `mode` | `udp` | `udp` (wireless, primary) or `serial` (USB cable, fallback) |
-| `invert_turns` | `true` | Set when the vehicle turns the opposite way to the command. Applied to the outgoing byte only, so it corrects blink, webcam and keyboard turns together |
 | `resend_interval_ms` | `250` | Re-send the current command this often. Doubles as the watchdog keepalive, so it **must stay well below the firmware's 2000 ms `WATCHDOG_TIMEOUT_MS`** |
 | `queue_size` | `32` | How many command changes can wait before the sender drops the oldest |
 
@@ -213,9 +191,9 @@ Keep the two 15-20 apart.
 
 ---
 
-## Threshold tuning guide
+## Tuning guide
 
-Based on what the calibration phase reports.
+For the attention thresholds, based on what the calibration phase reports:
 
 | Symptom | Change |
 |---|---|
@@ -223,15 +201,22 @@ Based on what the calibration phase reports.
 | Cannot get it to move | Lower `attention_forward_threshold`; check signal quality first |
 | Stutters between forward and stop | Widen the gap between the two thresholds |
 | Stops on a momentary lapse | Raise `attention_stop_hold_ms` |
-| Ordinary blinking causes turns | Raise `blink_strength_threshold` |
-| One blink causes two turns | Raise `blink_debounce_ms` |
 | Sluggish response to concentration | Lower `attention_window` |
 | Jittery, noisy attention | Raise `attention_window` |
 | Commands keep pausing | Check headset fit; as a last resort raise `poor_signal_cutoff` |
 
-Run `python main.py` and let the calibration phase finish. It reports the
-user's mean, spread and range, then suggests thresholds. `--apply-calibration`
-uses them for that session without writing to the file.
+For the turns:
 
-Tune with at least three different people. Thresholds fitted to whoever wore
-the headset most will not fit the person who wears it on demo day.
+| Symptom | Change |
+|---|---|
+| A resting hand triggers turns | Raise `vision.raise_margin` |
+| A hand passing through frame triggers turns | Raise `vision.hold_frames` |
+| One raise gives two turns | Raise `vision.refractory_ms` |
+| A held turn stutters | Raise `control.turn_command_repeat_ms` |
+
+The calibration phase reports the user's mean, spread and range at startup
+and suggests thresholds from them. `--apply-calibration` uses those
+suggestions for that session without writing to the file.
+
+Attention baselines differ from person to person, so thresholds fitted to one
+wearer will not necessarily suit another.

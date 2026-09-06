@@ -55,7 +55,7 @@ DEFAULTS: Dict[str, Any] = {
         },
     },
     "vision": {
-        "enabled": False,
+        "enabled": True,
         "camera_index": 0,
         "width": 640,
         "height": 480,
@@ -73,7 +73,7 @@ DEFAULTS: Dict[str, Any] = {
         "attention_forward_threshold": 60,
         "attention_stop_threshold": 40,
         "attention_stop_hold_ms": 1000,
-        "turn_source": "blink",
+        "turn_source": "vision",
         "hold_turn_while_raised": True,
         "blink_mode": "alternate",
         "first_turn_direction": "LEFT",

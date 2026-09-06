@@ -1,24 +1,31 @@
 # NeuroDrive
 
-**An EEG-controlled vehicle.** You concentrate, it drives. You blink, it
-turns. You take the headset off, it stops.
+**An EEG-controlled vehicle.** You concentrate, it drives. You raise a hand,
+it turns. You take the headset off, it stops.
 
 A NeuroSky MindWave Mobile 2 streams brain-activity metrics to a laptop over
-Bluetooth. A Python bridge turns those into four movement commands and sends
-them over WiFi to an ESP32, which drives a 2WD chassis through an L298N motor
-driver.
+Bluetooth, and a webcam watches the driver. A Python bridge turns attention
+into forward and stop, turns a raised hand into left and right, and sends the
+result over WiFi to an ESP32, which drives a 2WD chassis through an L298N
+motor driver.
 
 ```
   ┌──────────┐  Bluetooth  ┌──────────┐  WiFi UDP  ┌────────┐  PWM  ┌───────┐
-  │ MindWave │────────────►│  Python  │───────────►│ ESP32  │──────►│ L298N │──► motors
-  │ Mobile 2 │  ThinkGear  │  bridge  │  "F\n"     │        │       │       │
-  └──────────┘             └──────────┘            └────────┘       └───────┘
-    attention               thresholds              state machine
-    blink                   debounce                watchdog
+  │ MindWave │────────────►│          │───────────►│ ESP32  │──────►│ L298N │──► motors
+  │ Mobile 2 │  ThinkGear  │  Python  │  "F\n"     │        │       │       │
+  └──────────┘  attention  │  bridge  │            └────────┘       └───────┘
+  ┌──────────┐             │          │             state machine
+  │  Webcam  │────────────►│          │             watchdog
+  └──────────┘  hand raise └──────────┘
+                            thresholds
 ```
 
-An optional webcam channel can steer as well: raise a hand and the vehicle
-turns that way, for as long as you hold it up.
+Two inputs, four commands:
+
+| Input | Produces |
+|---|---|
+| Attention level from the headset | **FORWARD** and **STOP** |
+| A raised hand at the webcam | **LEFT** and **RIGHT** |
 
 ---
 
@@ -30,27 +37,19 @@ cd NeuroDrive
 ```
 
 Create a virtual environment and activate it using whatever your shell
-expects, then install the dependency:
+expects, then install the dependencies:
 
 ```
 python -m venv .venv
 pip install -r python_bridge/requirements.txt
 ```
 
-That installs `pyserial`, which is needed only for real hardware. In mock and
-replay mode the bridge runs on the standard library alone, so you can skip
-the install entirely and still drive the whole pipeline.
-
-The webcam channel needs two more packages, left out of `requirements.txt` on
-purpose so the bridge runs on machines without them:
-
-```
-pip install mediapipe opencv-python
-```
+That installs `pyserial` for the headset and the ESP32's USB fallback, plus
+`mediapipe` and `opencv-python` for the webcam.
 
 The pose model is already committed to the repository at
 `python_bridge/models/pose_landmarker_lite.task`, so there is nothing to
-download.
+download and the bridge needs no internet access to run.
 
 ---
 
@@ -62,10 +61,19 @@ python main.py --source mock --skip-calibration
 ```
 
 You get the live dashboard with a synthetic attention trace, commands being
-decided, and a session CSV in `logs/`. Nothing is listening on the other end
-of the UDP socket, which is fine — the bridge does not require an ack.
+decided, and a session CSV in `logs/`. Raise a hand at the webcam and the
+turn appears on the Command line. Nothing is listening on the other end of
+the UDP socket, which is fine — the bridge does not require an ack.
 
 Press `k` to drive with the arrow keys, `q` to quit.
+
+To run with no camera either, turn it off for that run:
+
+```
+python main.py --source mock --skip-calibration --set vision.enabled=false
+```
+
+Attention still drives forward and stop; there is simply no way to turn.
 
 ---
 
@@ -78,10 +86,10 @@ NeuroDrive/
 │   ├── thinkgear.py            NeuroSky packet parser
 │   ├── eeg_sources.py          serial / mock / replay backends
 │   ├── eeg_reader.py           acquisition thread
-│   ├── signal_processor.py     smoothing, blink detection
+│   ├── signal_processor.py     smoothing and the signal-quality gate
+│   ├── vision.py               webcam hand-raise detection
 │   ├── command_mapper.py       thresholds -> FORWARD/LEFT/RIGHT/STOP
 │   ├── wifi_sender.py          UDP + serial transport, send thread
-│   ├── vision.py               webcam hand-raise input (optional)
 │   ├── calibration.py          startup baseline
 │   ├── console_ui.py           live dashboard
 │   ├── keyboard_input.py       arrow-key override
@@ -92,7 +100,7 @@ NeuroDrive/
 │   ├── config.json             every tunable parameter
 │   ├── config.README.md        what each parameter does
 │   ├── vision.README.md        the webcam channel in detail
-│   ├── requirements.txt        pyserial
+│   ├── requirements.txt        pyserial, mediapipe, opencv-python
 │   ├── models/                 the committed pose model
 │   └── logs/                   run logs and session CSVs, plus demo_session.csv
 │
@@ -146,7 +154,7 @@ other one shows `000000000000` — that is the incoming port, and it opens
 instantly and then streams nothing forever, which looks exactly like a
 working connection that never produces data.
 
-Put the port you picked into `python_bridge/config.json`:
+That port is what `python_bridge/config.json` needs:
 
 ```json
 "eeg":       { "source": "serial", "serial": { "port": "COM4" } },
@@ -157,7 +165,22 @@ Power the headset on and wait for a **solid** blue LED before starting the
 bridge. A blinking LED means it has not linked yet, and it goes back to sleep
 if nothing connects.
 
-### 3. Drive
+### 3. The camera
+
+`vision_test.py` exercises the camera and the pose model on their own, with
+no headset and no vehicle:
+
+```
+cd python_bridge
+python vision_test.py
+```
+
+A preview window opens with the driver's shoulders and wrists drawn on, and
+every accepted raise prints a line. It also reports the percentage of frames
+in which it found a person; backlighting from a window behind the driver is
+the usual cause of a low figure. See `vision.README.md`.
+
+### 4. Drive
 
 ```
 cd python_bridge
@@ -165,7 +188,9 @@ python main.py --source serial
 ```
 
 Fifteen seconds of calibration, during which the vehicle cannot move. Then
-it arms.
+it arms. Concentrate to go, relax to stop, raise a hand to turn.
+
+Add `--vision-preview` to put the tracked skeleton on screen while driving.
 
 | Key | Action |
 |---|---|
@@ -174,16 +199,6 @@ it arms.
 | `space` | Software emergency stop (`Enter` re-arms) |
 | `c` | Recalibrate |
 | `q` | Quit. Always sends STOP first |
-
-### With the webcam as well
-
-```
-python main.py --source serial --vision --turn-source both
-```
-
-`--vision` on its own switches steering to the camera. `--turn-source both`
-keeps blinks working too. Add `--vision-preview` to watch what the pose model
-is tracking. See `vision.README.md`.
 
 ---
 
@@ -196,11 +211,10 @@ All of these run from `python_bridge/`.
 ```
 python main.py                                  # whatever config.json says
 python main.py --source serial                  # real headset
-python main.py --source mock                    # synthetic signal, no hardware
+python main.py --source mock                    # synthetic signal, no headset
 python main.py --source replay                  # replays logs/demo_session.csv
 
-python main.py --source serial --vision --turn-source both        # EEG + webcam
-python main.py --source serial --vision --turn-source both --vision-preview
+python main.py --source serial --vision-preview # show the camera window too
 
 python main.py --replay-file logs/demo_session.csv  # replay one specific run
 python main.py --keyboard                       # start in keyboard override
@@ -240,7 +254,6 @@ python vision_test.py --duration 30
 python vision_test.py --raise-margin 0.10       # require a higher raise
 python vision_test.py --hold-frames 5           # require a steadier raise
 python vision_test.py --refractory-ms 800       # shorter gap between turns
-python vision_test.py --swap-sides              # if turns come out mirrored
 ```
 
 ### Finding the headset's serial port
@@ -262,8 +275,6 @@ Three ways, in increasing order of permanence.
 | `--source {serial,mock,replay}` | `eeg.source` |
 | `--transport {udp,serial}` | `transport.mode` |
 | `--esp32-ip` / `--esp32-port` | `transport.udp.esp32_ip` / `.esp32_port` |
-| `--turn-source {blink,vision,both}` | `control.turn_source` |
-| `--vision` | `vision.enabled` (and implies `--turn-source vision`) |
 | `--vision-preview` | `vision.preview` |
 | `--replay-file` | `eeg.replay.csv_path`, and implies `--source replay` |
 
@@ -272,9 +283,9 @@ Three ways, in increasing order of permanence.
 ```
 python main.py --set control.attention_forward_threshold=65
 python main.py --set eeg.serial.port=COM7 --set eeg.source=serial
-python main.py --set transport.invert_turns=false
+python main.py --set vision.hold_frames=5
 python main.py --set control.hold_turn_while_raised=false
-python main.py --set signal_processing.blink_strength_threshold=120
+python main.py --set vision.raise_margin=0.10
 python main.py --set control.calibration_seconds=0 --set loop.rate_hz=30
 ```
 
@@ -297,31 +308,26 @@ either route, and every default shown is what a fresh clone actually runs.
 | `eeg.replay.csv_path` | `logs/demo_session.csv` | Which run to replay |
 | `eeg.replay.loop` / `.speed` | `true` / `1.0` | Loop forever, playback rate |
 | `eeg.mock.seed` | `42` | Makes the synthetic signal reproducible |
-| `eeg.mock.blink_interval_s` | `8.0` | How often the fake user blinks |
 | `eeg.signal_timeout_ms` | `2000` | Silence after which the signal counts as lost |
 | `signal_processing.attention_window` | `5` | Samples in the rolling average |
-| `signal_processing.blink_strength_threshold` | `150` | Below this, a blink is ignored |
-| `signal_processing.blink_debounce_ms` | `300` | Minimum gap between blinks |
 | `signal_processing.poor_signal_cutoff` | `25` | Above this, commands pause |
-| `vision.enabled` | `false` | Turn the webcam channel on |
+| `vision.enabled` | `true` | The webcam channel |
 | `vision.camera_index` | `0` | Which camera |
 | `vision.raise_margin` | `0.05` | How far above the shoulder a wrist must be |
 | `vision.hold_frames` | `3` | Frames a raise must persist |
 | `vision.refractory_ms` | `1200` | Quiet period after a gesture |
-| `vision.swap_sides` | `false` | Only if the *camera* turns are mirrored |
+| `vision.preview` | `false` | Show the camera window |
 | `control.attention_forward_threshold` | `60` | Drive at or above this |
 | `control.attention_stop_threshold` | `40` | Stop below this |
 | `control.attention_stop_hold_ms` | `1000` | How long it must stay low |
-| `control.turn_source` | `blink` | `blink`, `vision` or `both` |
+| `control.turn_source` | `vision` | Raised hands produce the turns |
 | `control.hold_turn_while_raised` | `true` | Keep turning while the hand is up |
-| `control.blink_mode` | `alternate` | Or `single_double` |
 | `control.turn_command_repeat_ms` | `500` | How long a turn persists without a refresh |
 | `control.calibration_seconds` | `15` | `0` skips calibration |
 | `control.require_good_signal` | `true` | Refuse to drive on a poor signal |
 | `transport.mode` | `udp` | Or `serial` over USB |
 | `transport.udp.esp32_ip` | `192.168.4.1` | The vehicle's address |
 | `transport.udp.esp32_port` | `4210` | Command port |
-| `transport.invert_turns` | `true` | Fix a vehicle wired mirrored |
 | `transport.resend_interval_ms` | `250` | Also the watchdog keepalive rate |
 | `ui.console_dashboard` | `true` | The live display |
 | `ui.colour` | `true` | Turn off for a dumb terminal |
@@ -339,20 +345,16 @@ either route, and every default shown is what a fresh clone actually runs.
 | Attention (0-100, smoothed over 5 samples) | ≥ 60 | **FORWARD** |
 | | < 40 for more than 1 s | **STOP** |
 | | between 40 and 60 | hold. The dead band stops it stuttering |
-| Blink strength | ≥ 150, debounced 300 ms | **LEFT**, then **RIGHT**, alternating |
-| Raised hand (webcam) | held up, when vision is on | **LEFT** / **RIGHT**, for as long as it stays up |
+| Raised hand (webcam) | held up | **LEFT** / **RIGHT**, for as long as it stays up |
 | Signal quality | "poor signal" > 25 | commands paused |
 | Link | no EEG data for 2 s | **STOP** |
 
-A raised hand goes through the same safety checks as a blink, so the camera
-cannot move a vehicle whose operator the headset has lost track of.
+A raised hand goes through the same safety gates as everything else, so the
+camera cannot move a vehicle whose operator the headset has lost track of.
 
 Every number here lives in `config.json` — see [Setting parameters
 yourself](#setting-parameters-yourself) above.
 
-Two worth knowing about. `transport.invert_turns` fixes a vehicle that turns
-the opposite way to the command; it is applied to the outgoing byte only, so
-one setting corrects blink, webcam and keyboard turns together.
 `control.hold_turn_while_raised` decides whether a raised hand turns for as
 long as it is up, or gives one short pulse per raise.
 
@@ -373,8 +375,9 @@ Four independent layers. Each works if the others fail.
 
 Quitting the bridge, in any way, transmits STOP before exiting.
 
-> The vehicle can move on its own. Test it in a clear area, keep the kill
-> switch in someone's hand, and never leave it powered and unattended.
+> The vehicle moves under its own power, and the software layers above can
+> all fail at once. The hardware kill switch is the only one that cannot,
+> which is why it stays in an operator's hand whenever the motors are live.
 
 ---
 
@@ -393,6 +396,9 @@ Almost every failure is the Bluetooth link, not the software.
 A fresh AAA fixes more of these than anything else. The headset also holds
 only one connection at a time, so turn Bluetooth off on any phone or tablet
 it has been paired with.
+
+If the vehicle drives but will not turn, the fault is the camera rather than
+the headset. Run `python vision_test.py` and see `vision.README.md`.
 
 ---
 

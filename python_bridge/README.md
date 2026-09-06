@@ -1,7 +1,10 @@
 # Python bridge
 
-The laptop half of NeuroDrive: reads the EEG headset, decides what the
-vehicle should do, and sends commands to the ESP32.
+The laptop half of NeuroDrive: reads the EEG headset and the webcam, decides
+what the vehicle should do, and sends commands to the ESP32.
+
+Attention drives **FORWARD** and **STOP**. A raised hand turns **LEFT** and
+**RIGHT**.
 
 ---
 
@@ -9,8 +12,9 @@ vehicle should do, and sends commands to the ESP32.
 
 ```
 python main.py                                  # uses config.json as-is
-python main.py --source mock --esp32-ip 127.0.0.1   # no hardware at all
+python main.py --source mock --esp32-ip 127.0.0.1   # no vehicle at all
 python main.py --source serial --set eeg.serial.port=COM4
+python main.py --source serial --vision-preview # show the camera window
 python main.py --replay-file logs/demo_session.csv
 python main.py --keyboard                       # start in override mode
 python main.py --print-config                   # show the merged config, exit
@@ -24,9 +28,7 @@ python main.py --print-config                   # show the merged config, exit
 | `--esp32-ip`, `--esp32-port` | Vehicle address |
 | `--replay-file PATH` | Replay a recorded session |
 | `--set KEY=VALUE` | Override any config key (repeatable) |
-| `--vision` | Turn with raised hands (implies `--turn-source vision`) |
 | `--vision-preview` | Show the camera window |
-| `--turn-source {blink,vision,both}` | What produces LEFT/RIGHT |
 | `--skip-calibration` | Arm immediately |
 | `--apply-calibration` | Use the thresholds calibration suggests |
 | `--duration N` | Run N seconds then exit (for test runs) |
@@ -60,9 +62,9 @@ python main.py --print-config                   # show the merged config, exit
 └────────────────────────────────────────────────────────────────
 ```
 
-Put this on the projector during the demo. The attention bar crossing the
-threshold at the exact moment the vehicle starts moving is the one thing that
-makes the system readable to an audience.
+The attention bar crossing the threshold at the same moment the vehicle
+starts moving is what makes the control decision visible while it is
+happening.
 
 ---
 
@@ -76,7 +78,7 @@ Data flows top to bottom; each module has one job.
 | `thinkgear.py` | ThinkGear packet framing and payload decoding. Pure, no I/O |
 | `eeg_sources.py` | `EEGSource` backends: serial, mock, replay |
 | `eeg_reader.py` | Acquisition thread, reconnection, signal-loss detection |
-| `signal_processor.py` | Rolling average, blink detection, quality gate |
+| `signal_processor.py` | Rolling average and the signal-quality gate |
 | `vision.py` | Webcam hand-raise detection, in its own thread |
 | `command_mapper.py` | Thresholds → `FORWARD/LEFT/RIGHT/STOP` |
 | `wifi_sender.py` | UDP/serial transport, send thread, keepalive, acks |
@@ -90,9 +92,9 @@ Data flows top to bottom; each module has one job.
 
 ### Why the split between processor and mapper
 
-The processor answers one question: what is the signal doing? Smoothing,
-blink detection, quality. The mapper answers the next one: so what should the
-vehicle do? Thresholds, hysteresis, turn timing.
+The processor answers one question: what is the signal doing? Smoothing and
+quality. The mapper answers the next one: so what should the vehicle do?
+Thresholds, hysteresis, turn timing.
 
 That boundary is the whole point. Retuning the vehicle for a different user
 touches only the mapper's numbers in `config.json`, never the detection code
@@ -120,11 +122,11 @@ points:
 | File | Contents |
 |---|---|
 | `neurodrive_<stamp>.log` | Events, warnings, connection changes |
-| `session_<stamp>.csv` | One row per control cycle: attention, quality, blinks, command, and the reason for it |
+| `session_<stamp>.csv` | One row per control cycle: attention, quality, command, and the reason for it |
 
-The session CSV is used for analysis and as the input to replay mode. A good
-recorded run *is* the fallback demo. `logs/demo_session.csv` is committed for
-exactly that purpose, and is what `--source replay` plays back by default.
+The session CSV is used for analysis and as the input to replay mode.
+`logs/demo_session.csv` is committed, and is what `--source replay` plays
+back by default.
 
 Everything else in `logs/` is git-ignored, so ordinary runs never show up as
 repository changes.
@@ -161,33 +163,51 @@ usually settles within 10-20 seconds of putting it on.
    that `esp32_ip` matches what the ESP32 printed at boot.
 4. Test the vehicle on its own: `python udp_test_sender.py --ping`
 
+### It drives, but it will not turn
+
+The fault is on the camera side. Check, in order:
+
+1. Run `python vision_test.py`. If that sees nothing, the bridge will not
+   either.
+2. Are `mediapipe` and `opencv-python` installed? The camera thread logs
+   `vision could not start` and exits if they are missing, and the rest of
+   the bridge carries on without any way to turn.
+3. Is another application holding the camera?
+4. Is `vision.enabled` still `true`? Check with `--print-config`.
+
+`vision.README.md` covers tuning in full.
+
 ### The vehicle moves but will not stop
 
-Press the hardware kill switch. The watchdog should then stop it within 2
-seconds of the bridge quitting. If it does not, the firmware is not running
-the current build, or someone changed `WATCHDOG_TIMEOUT_MS`.
+The hardware kill switch cuts the motor supply immediately. The watchdog
+should also stop it within 2 seconds of the bridge quitting; if it does not,
+the firmware is not running the current build, or `WATCHDOG_TIMEOUT_MS` has
+been changed.
 
 ### Turns are too long or too short
 
-`control.turn_command_repeat_ms` (default 500 ms) is how long the bridge
-keeps transmitting a turn without a fresh trigger. Lower it for shorter
-turns, raise it for longer ones.
+While a hand is held up and `control.hold_turn_while_raised` is `true`, the
+turn lasts exactly as long as the hand stays raised and ends when it comes
+down. That is the normal mode, and there is nothing to tune.
 
-While a hand is held up and `control.hold_turn_while_raised` is `true`, that
-deadline is pushed forward on every control cycle, so the turn lasts exactly
-as long as the hand stays raised and ends when it comes down. In that mode
-the value is a grace window covering the gap between camera frames, not the
-turn length, and lowering it below about 200 ms will make a held turn
-stutter.
+`control.turn_command_repeat_ms` (default 500 ms) is the grace window that
+covers the gap between camera frames, not the turn length. The camera runs at
+15 fps and the control loop at 20 Hz, so 500 ms has plenty of margin;
+dropping it below roughly 200 ms will make a held turn stutter.
+
+With `control.hold_turn_while_raised` set to `false`, one raise gives one
+pulse of `turn_command_repeat_ms` instead, ending even if the arm is still
+up.
 
 The firmware's own `TURN_PULSE_MS` (300 ms in `config.h`) caps how long a
 single pulse runs before the vehicle returns to its previous state. A longer
-bridge-side turn simply re-triggers it.
+turn arrives as repeated pulses.
 
 ### The dashboard is garbled
 
 The dashboard redraws with ANSI escape sequences, which some terminals do not
-handle. Use a terminal with ANSI support, or run with `--no-dashboard`.
+handle. `--no-dashboard` turns it off, and `ui.console_dashboard` does the
+same permanently.
 
 ---
 
