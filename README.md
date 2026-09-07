@@ -410,3 +410,8 @@ the headset. Run `python vision_test.py` and see `vision.README.md`.
 | [`python_bridge/config.README.md`](python_bridge/config.README.md) | Every configuration key, and how to tune it |
 | [`python_bridge/vision.README.md`](python_bridge/vision.README.md) | The webcam channel: setup, tuning, and how it folds into the mapper |
 | [`firmware/README.md`](firmware/README.md) | Flashing, wiring, and firmware troubleshooting |
+
+---
+
+## Report
+Full project report: [docs/NeuroDrive_Report.pdf](./docs/NeuroDrive_Report.pdf)
