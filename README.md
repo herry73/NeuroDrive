@@ -29,6 +29,24 @@ Two inputs, four commands:
 
 ---
 
+## Report
+Full project report: [docs/NeuroDrive_Report.pdf](./docs/NeuroDrive_Report.pdf)
+
+## Slides
+Presentation slides: [docs/NeuroDrive_Slides.pdf](./docs/NeuroDrive_Slides.pdf)
+
+## Demo
+[docs/NeuroDrive.mov](./docs/NeuroDrive.mov)
+
+> This repo uses [Git LFS](https://git-lfs.com) for the demo video. Install
+> it once per machine before cloning or pulling:
+> ```
+> git lfs install
+> ```
+> If you already cloned without it, run `git lfs pull` after installing.
+
+---
+
 ## Install
 
 ```
@@ -410,8 +428,3 @@ the headset. Run `python vision_test.py` and see `vision.README.md`.
 | [`python_bridge/config.README.md`](python_bridge/config.README.md) | Every configuration key, and how to tune it |
 | [`python_bridge/vision.README.md`](python_bridge/vision.README.md) | The webcam channel: setup, tuning, and how it folds into the mapper |
 | [`firmware/README.md`](firmware/README.md) | Flashing, wiring, and firmware troubleshooting |
-
----
-
-## Report
-Full project report: [docs/NeuroDrive_Report.pdf](./docs/NeuroDrive_Report.pdf)
